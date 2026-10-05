@@ -99,21 +99,30 @@ flowchart TB
   - `data/documents/`: Secure staging area for original engineering documents and CAD files.
   - `data/processed/`: Extracted text, normalized JSON CAD trees, generated previews, and cached chunks.
 
-### 3.4 AI Orchestration & Search Engine (Planned Integration)
+### 3.4 Search & Embeddings Engine (Milestone 4 Implemented)
+- **Embedding Layer**:
+  - Abstract interface `BaseEmbeddingProvider` with factory pattern (`get_embedding_provider`).
+  - `LocalMockEmbeddingProvider`: Deterministic token-hash random projection generating unit-normalized 1536-dimensional dense vectors offline without API keys or cloud dependencies.
+  - `AzureOpenAIEmbeddingProvider`: Production integration connecting to Azure OpenAI (`text-embedding-3-large`).
+- **Hybrid Search Engine**:
+  - Abstract interface `BaseSearchIndex` with factory pattern (`get_search_index`).
+  - `LocalSearchIndex`: In-process hybrid search engine supporting BM25 lexical keyword matching, cosine vector similarity, and Reciprocal Rank Fusion (RRF).
+  - `AzureSearchIndex`: Production cloud integration targeting Azure AI Search REST API.
+  - **Reciprocal Rank Fusion (RRF)**:
+    $$RRF(d) = \sum_{m \in \{\text{keyword}, \text{vector}\}} \frac{1}{60 + \text{rank}_m(d)}$$
+  - Metadata filtering: Granular filtering by `document_id`, `document_type`, `part_number`, `revision`, and `page_number`.
+
+### 3.5 AI Orchestration (Planned Integration - Milestone 5)
 - **LangGraph**:
   - State machine-based multi-agent orchestration.
   - Routes complex queries across hybrid search, CAD metadata lookup, and synthesis agents.
   - Enables human-in-the-loop validation for engineering change recommendations.
 - **Azure OpenAI**:
   - Language Model: `gpt-4o` for deep technical synthesis and engineering reasoning.
-  - Embedding Model: `text-embedding-3-large` for dense semantic representation.
-- **Azure AI Search**:
-  - Hybrid search combining BM25 keyword matching and dense vector search with Semantic Re-ranking.
-  - Separate indexes for text documents and CAD metadata/assembly nodes.
 
 ---
 
-## 4. Document Intelligence & OCR Pipeline (Milestone 3 Implemented)
+## 4. Document Intelligence & Indexing Pipeline (Milestones 3 & 4 Implemented)
 
 ```mermaid
 flowchart TD
@@ -134,15 +143,18 @@ flowchart TD
     SavePage --> PostgresPages[("PostgreSQL 16\n(document_pages table)")]
     PostgresPages --> FinalStatus["Update Document Status\n(PENDING -> PROCESSING -> PROCESSED)"]
 
+    FinalStatus --> Chunking["Engineering Document Chunker\n(Preserves Headings, Units, Tolerances, Overlap)"]
+    Chunking --> EmbeddingGen["Generate Dense Embeddings\n(1536-dim via LocalMock / Azure OpenAI)"]
+    EmbeddingGen --> SaveChunks[("PostgreSQL 16\n(document_chunks table)")]
+    SaveChunks --> IndexSearch["Hybrid Search Index\n(BM25 + Dense Vectors + RRF)"]
+
     subgraph FuturePhases["Future Milestones (Strictly Decoupled)"]
-        Chunking["Document Chunking (Milestone 4)"]
-        Embeddings["Vector Embeddings (Milestone 4)"]
-        Search["Azure AI Search Index (Milestone 4)"]
-        RAG["RAG Hybrid Retrieval (Milestone 5)"]
-        LangGraph["LangGraph Reasoning Agent (Milestone 5)"]
+        RAG["RAG Hybrid Retrieval & Grounding (Milestone 5)"]
+        LangGraph["LangGraph Multi-Agent Orchestrator (Milestone 5)"]
+        CAD["CAD Geometry Engine (Milestone 6)"]
     end
 
-    FinalStatus -.-> FuturePhases
+    IndexSearch -.-> FuturePhases
 ```
 
 ---
@@ -154,6 +166,7 @@ flowchart TD
 3. **Information Disclosure Prevention**: Global exception handlers redact absolute filesystem paths, database connection strings, and stack traces from API responses.
 4. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
 5. **Structured Logging**: Contextual logs with document ID and page numbers for pipeline observability without logging full extracted document texts.
+6. **Graceful Degradation**: Dual provider architecture allows local development and automated testing with zero cloud credentials, automatically promoting to Azure OpenAI and Azure AI Search when credentials are provided.
 
 ---
 
@@ -163,8 +176,9 @@ flowchart TD
 | :--- | :--- | :--- |
 | **Milestone 1** | Repository structure, project scaffolding, base types, Docker templates. | Completed |
 | **Milestone 2** | **Backend Foundation**: Asynchronous FastAPI, layered Service architecture, async SQLAlchemy 2.0 with PostgreSQL, bidirectional Alembic migrations, foundational Document metadata API (`GET`, `POST`), structured error handlers, and hermetic automated pytest suite. Azure OpenAI & AI Search configurations are decoupled and optional. | Completed |
-| **Milestone 3** (Current) | **Document Intelligence Pipeline**: Page-by-page PDF processing with PyMuPDF, scanned page detection heuristic, OpenCV image preprocessing, Tesseract OCR fallback, 1-based `DocumentPage` persistence in PostgreSQL, file upload endpoint (`POST /upload`), page retrieval APIs (`GET /pages`, `GET /pages/{num}`), CLI ingestion tool (`ingest_cad_docs.py`), and 24 passing automated tests. | Completed |
-| **Milestone 4** | **Document Chunking & Vector Search**: Contextual chunking preserving technical tables and sections, embedding generation, and Azure AI Search hybrid index. | Planned |
+| **Milestone 3** | **Document Intelligence Pipeline**: Page-by-page PDF processing with PyMuPDF, scanned page detection heuristic, OpenCV image preprocessing, Tesseract OCR fallback, 1-based `DocumentPage` persistence in PostgreSQL, file upload endpoint (`POST /upload`), page retrieval APIs (`GET /pages`, `GET /pages/{num}`), CLI ingestion tool (`ingest_cad_docs.py`), and 24 passing automated tests. | Completed |
+| **Milestone 4** (Current) | **Document Chunking & Hybrid Vector Search**: Structural/semantic engineering chunker preserving engineering notation, tolerances, units, and page provenance; 1536-dimensional vector embedding architecture with deterministic offline mock and Azure OpenAI client; hybrid BM25 + vector search engine with Reciprocal Rank Fusion (RRF); `DocumentChunk` schema and Alembic migrations; chunk generation and search API endpoints (`/chunks/generate`, `/chunks`, `/search`); CLI retrieval tool (`search_docs.py`); and 41 passing automated tests. | Completed |
 | **Milestone 5** | **LangGraph Copilot Agent**: Multi-turn dialogue, citation generation with page-level verification loop, and technical synthesis. | Planned |
 | **Milestone 6** | **CAD Extension**: STEP/DXF metadata extraction, BOM cross-referencing, and visual integration. | Planned |
+
 

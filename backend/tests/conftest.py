@@ -9,7 +9,7 @@ from app.main import app
 from app.core.database import get_db
 from app.models.base import Base
 # Ensure all models are registered with Base.metadata
-from app.models.document import Document, DocumentPage, CadMetadata  # noqa: F401
+from app.models.document import Document, DocumentPage, DocumentChunk, CadMetadata  # noqa: F401
 from app.models.chat import ChatSession, ChatMessage   # noqa: F401
 
 # In-memory SQLite async engine for hermetic test execution

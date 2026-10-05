@@ -73,5 +73,13 @@ class Settings(BaseSettings):
     PDF_MIN_NATIVE_TEXT_CHARS: int = 50
     OCR_DPI: int = 300
 
+    # Document Chunking & Hybrid Search Configuration (Milestone 4)
+    CHUNK_SIZE_CHARS: int = 800
+    CHUNK_OVERLAP_CHARS: int = 150
+    EMBEDDING_DIMENSIONS: int = 1536
+    EMBEDDING_PROVIDER: str = "auto"  # "auto", "azure", "local"
+    SEARCH_PROVIDER: str = "auto"     # "auto", "azure", "local"
+    HYBRID_SEARCH_TOP_K: int = 5
+
 
 settings = Settings()

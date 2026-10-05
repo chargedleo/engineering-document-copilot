@@ -75,6 +75,15 @@ class Document(Base, TimestampMixin):
         lazy="selectin"
     )
 
+    # Document chunks relationship (Milestone 4)
+    chunks: Mapped[List["DocumentChunk"]] = relationship(
+        "DocumentChunk",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentChunk.chunk_index",
+        lazy="selectin"
+    )
+
     # CAD metadata relationship (future extension, simplified for Milestone 2)
     cad_metadata: Mapped[List["CadMetadata"]] = relationship(
         "CadMetadata",
@@ -111,8 +120,55 @@ class DocumentPage(Base, TimestampMixin):
     # Relationship back to document
     document: Mapped["Document"] = relationship("Document", back_populates="pages")
 
+    # Relationship to chunks
+    chunks: Mapped[List["DocumentChunk"]] = relationship(
+        "DocumentChunk",
+        back_populates="page",
+        cascade="all, delete-orphan",
+        order_by="DocumentChunk.chunk_index",
+        lazy="selectin"
+    )
+
     __table_args__ = (
         UniqueConstraint("document_id", "page_number", name="uq_document_pages_document_page"),
+    )
+
+
+class DocumentChunk(Base, TimestampMixin):
+    """
+    Structural search chunk representing an engineering document subsection.
+    Preserves page boundaries, document identity, character counts, and embedding vectors.
+    """
+    __tablename__ = "document_chunks"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    document_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    page_id: Mapped[Optional[str]] = mapped_column(
+        String(36),
+        ForeignKey("document_pages.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True
+    )
+    chunk_index: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    character_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    metadata_payload: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
+    embedding: Mapped[Optional[List[float]]] = mapped_column(JSON, nullable=True)
+    embedding_status: Mapped[str] = mapped_column(String(50), default="pending", nullable=False, index=True)
+
+    # Relationships
+    document: Mapped["Document"] = relationship("Document", back_populates="chunks")
+    page: Mapped[Optional["DocumentPage"]] = relationship("DocumentPage", back_populates="chunks")
+
+    __table_args__ = (
+        UniqueConstraint("document_id", "chunk_index", name="uq_document_chunks_document_chunk_index"),
     )
 
 

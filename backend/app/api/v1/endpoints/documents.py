@@ -13,6 +13,10 @@ from app.schemas.document import (
     DocumentPageResponse,
     DocumentUploadResponse,
 )
+from app.schemas.chunk import (
+    ChunkGenerateResponse,
+    DocumentChunkResponse,
+)
 from app.services.document_service import DocumentService
 from app.services.document_processing.pdf_extractor import PDFValidationError
 from app.services.document_processing.ocr import TesseractNotFoundError
@@ -231,3 +235,103 @@ async def get_document_page(
         success=True,
         data=DocumentPageResponse.model_validate(page_obj)
     )
+
+
+@router.post("/{document_id}/chunks/generate", response_model=ApiResponse[ChunkGenerateResponse], status_code=status.HTTP_200_OK)
+async def generate_document_chunks(
+    document_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Split a document's extracted pages into structural chunks, compute dense vector embeddings,
+    persist them to PostgreSQL, and index them into hybrid search.
+    """
+    doc = await DocumentService.get_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID '{document_id}' not found"
+        )
+
+    try:
+        result = await DocumentService.generate_document_chunks(db, document_id)
+        return ApiResponse(
+            success=True,
+            data=result,
+            message=f"Generated {result.chunks_created} chunks for '{doc.filename}'."
+        )
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Chunk generation failed: {str(e)}"
+        )
+
+
+@router.get("/{document_id}/chunks", response_model=ApiResponse[PaginatedResponse[DocumentChunkResponse]], status_code=status.HTTP_200_OK)
+async def list_document_chunks(
+    document_id: str,
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
+    db: AsyncSession = Depends(get_db)
+):
+    """List structural chunks for a document ordered by chunk_index."""
+    doc = await DocumentService.get_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID '{document_id}' not found"
+        )
+
+    skip = (page - 1) * page_size
+    chunks, total = await DocumentService.list_document_chunks(
+        db,
+        document_id=document_id,
+        skip=skip,
+        limit=page_size
+    )
+
+    total_pages = (total + page_size - 1) // page_size if total > 0 else 1
+
+    return ApiResponse(
+        success=True,
+        data=PaginatedResponse(
+            items=[DocumentChunkResponse.model_validate(c) for c in chunks],
+            total=total,
+            page=page,
+            page_size=page_size,
+            total_pages=total_pages
+        )
+    )
+
+
+@router.get("/{document_id}/chunks/{chunk_id}", response_model=ApiResponse[DocumentChunkResponse], status_code=status.HTTP_200_OK)
+async def get_document_chunk(
+    document_id: str,
+    chunk_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """Retrieve a single chunk by chunk_id."""
+    doc = await DocumentService.get_document_by_id(db, document_id)
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Document with ID '{document_id}' not found"
+        )
+
+    chunk = await DocumentService.get_document_chunk(db, chunk_id)
+    if not chunk or chunk.document_id != document_id:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Chunk '{chunk_id}' for document '{document_id}' not found"
+        )
+
+    return ApiResponse(
+        success=True,
+        data=DocumentChunkResponse.model_validate(chunk)
+    )
+

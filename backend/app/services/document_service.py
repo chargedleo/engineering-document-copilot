@@ -3,12 +3,16 @@ import os
 import re
 from pathlib import Path
 from typing import List, Optional, Tuple
-from sqlalchemy import select, func, or_
+from sqlalchemy import select, func, or_, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
-from app.models.document import Document, DocumentStatus, DocumentPage, ExtractionMethod
+from app.models.document import Document, DocumentStatus, DocumentPage, DocumentChunk, ExtractionMethod
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentFilter
+from app.schemas.chunk import ChunkGenerateResponse
+from app.services.chunking import EngineeringDocumentChunker, PageInput
+from app.services.embeddings import get_embedding_provider
+from app.services.search import get_search_index
 from app.services.document_processing.processor import (
     process_pdf_document,
     ProcessedDocumentResult,
@@ -253,3 +257,152 @@ class DocumentService:
         )
         result = await db.execute(query)
         return result.scalar_one_or_none()
+
+    @staticmethod
+    async def generate_document_chunks(
+        db: AsyncSession,
+        document_id: str
+    ) -> ChunkGenerateResponse:
+        """
+        Transform a processed document's DocumentPage records into structural chunks,
+        generate dense embeddings, persist DocumentChunk records, and index into search index.
+        """
+        doc = await DocumentService.get_document_by_id(db, document_id)
+        if not doc:
+            raise ValueError(f"Document with ID {document_id} not found.")
+
+        pages_query = select(DocumentPage).where(
+            DocumentPage.document_id == document_id
+        ).order_by(DocumentPage.page_number.asc())
+        pages_result = await db.execute(pages_query)
+        pages = list(pages_result.scalars().all())
+
+        if not pages:
+            raise ValueError(f"Document {document_id} has no extracted pages to chunk. Run document processing first.")
+
+        # 1. Chunk document pages using structural engineering chunker
+        chunker = EngineeringDocumentChunker(
+            chunk_size_chars=settings.CHUNK_SIZE_CHARS,
+            chunk_overlap_chars=settings.CHUNK_OVERLAP_CHARS,
+        )
+        page_inputs = [
+            PageInput(page_id=p.id, page_number=p.page_number, text=p.text)
+            for p in pages
+        ]
+        doc_metadata = {
+            "document_id": doc.id,
+            "filename": doc.filename,
+            "document_type": doc.document_type,
+            "part_number": doc.part_number,
+            "revision": doc.revision,
+        }
+        chunk_outputs = chunker.chunk_document_pages(pages=page_inputs, document_metadata=doc_metadata)
+
+        # 2. Clean up any existing chunks for this document (idempotent re-generation)
+        delete_stmt = delete(DocumentChunk).where(DocumentChunk.document_id == document_id)
+        await db.execute(delete_stmt)
+        await db.flush()
+
+        search_index = get_search_index()
+        await search_index.delete_document_chunks(document_id)
+
+        if not chunk_outputs:
+            await db.commit()
+            return ChunkGenerateResponse(
+                document_id=doc.id,
+                filename=doc.filename,
+                chunks_created=0,
+                embeddings_generated=0,
+                indexed_count=0,
+                status="completed",
+            )
+
+        # 3. Generate embeddings for each chunk
+        texts_to_embed = [c.content for c in chunk_outputs]
+        embedding_provider = get_embedding_provider()
+        embeddings = await embedding_provider.embed_texts(texts_to_embed)
+
+        # 4. Persist DocumentChunk records to database
+        db_chunks: List[DocumentChunk] = []
+        for c_out, emb in zip(chunk_outputs, embeddings):
+            db_chunk = DocumentChunk(
+                document_id=doc.id,
+                page_id=c_out.page_id,
+                chunk_index=c_out.chunk_index,
+                page_number=c_out.page_number,
+                content=c_out.content,
+                character_count=c_out.character_count,
+                word_count=c_out.word_count,
+                metadata_payload=c_out.metadata_payload,
+                embedding=emb,
+                embedding_status="completed",
+            )
+            db.add(db_chunk)
+            db_chunks.append(db_chunk)
+
+        await db.commit()
+        for chunk in db_chunks:
+            await db.refresh(chunk)
+
+        # 5. Push to search index
+        index_records = [
+            {
+                "chunk_id": chunk.id,
+                "document_id": chunk.document_id,
+                "page_id": chunk.page_id,
+                "chunk_index": chunk.chunk_index,
+                "page_number": chunk.page_number,
+                "filename": doc.filename,
+                "document_type": doc.document_type,
+                "part_number": doc.part_number,
+                "revision": doc.revision,
+                "content": chunk.content,
+                "embedding": chunk.embedding,
+                "metadata": chunk.metadata_payload or {},
+            }
+            for chunk in db_chunks
+        ]
+        indexed_count = await search_index.index_chunks(index_records)
+
+        logger.info(
+            f"Successfully generated {len(db_chunks)} chunks and {len(embeddings)} embeddings "
+            f"for document {doc.id} ({doc.filename}); {indexed_count} indexed into search."
+        )
+
+        return ChunkGenerateResponse(
+            document_id=doc.id,
+            filename=doc.filename,
+            chunks_created=len(db_chunks),
+            embeddings_generated=len(embeddings),
+            indexed_count=indexed_count,
+            status="completed",
+        )
+
+    @staticmethod
+    async def list_document_chunks(
+        db: AsyncSession,
+        document_id: str,
+        skip: int = 0,
+        limit: int = 100
+    ) -> Tuple[List[DocumentChunk], int]:
+        """List chunks for a document ordered by chunk_index."""
+        query = select(DocumentChunk).where(DocumentChunk.document_id == document_id)
+        count_query = select(func.count()).select_from(query.subquery())
+        total = await db.scalar(count_query) or 0
+
+        query = query.order_by(DocumentChunk.chunk_index.asc()).offset(skip).limit(limit)
+        result = await db.execute(query)
+        chunks = list(result.scalars().all())
+
+        return chunks, total
+
+    @staticmethod
+    async def get_document_chunk(
+        db: AsyncSession,
+        chunk_id: str
+    ) -> Optional[DocumentChunk]:
+        """Retrieve a specific chunk record by UUID."""
+        query = select(DocumentChunk).where(DocumentChunk.id == chunk_id)
+        result = await db.execute(query)
+        return result.scalar_one_or_none()
+

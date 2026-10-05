@@ -35,8 +35,14 @@ logging.basicConfig(
 logger = logging.getLogger("ingest-docs")
 
 
-async def ingest_single_pdf(file_path: Path, document_type: str = "SPECIFICATION", part_number: str = None, revision: str = "A"):
-    """Ingest and process a single PDF file."""
+async def ingest_single_pdf(
+    file_path: Path,
+    document_type: str = "SPECIFICATION",
+    part_number: str = None,
+    revision: str = "A",
+    chunk: bool = True
+):
+    """Ingest, process, and optionally chunk a single PDF file."""
     if not file_path.is_file():
         logger.error(f"File not found: {file_path}")
         return False
@@ -61,19 +67,29 @@ async def ingest_single_pdf(file_path: Path, document_type: str = "SPECIFICATION
                 revision=revision,
             )
 
+            chunk_info = None
+            if chunk:
+                logger.info(f"Generating structural chunks and embeddings for document {doc.id}...")
+                chunk_info = await DocumentService.generate_document_chunks(session, doc.id)
+
             print("\n" + "=" * 60)
-            print("  DOCUMENT INGESTION REPORT")
+            print("  DOCUMENT INGESTION & INDEXING REPORT")
             print("=" * 60)
-            print(f"  Document ID      : {doc.id}")
-            print(f"  Filename         : {doc.filename}")
-            print(f"  Document Type    : {doc.document_type}")
-            print(f"  Part Number      : {doc.part_number or 'N/A'}")
-            print(f"  Revision         : {doc.revision}")
-            print(f"  Total Pages      : {result.total_pages}")
-            print(f"  Processed Pages  : {result.processed_pages}")
-            print(f"  Native Text Pages: {result.total_pages - result.ocr_pages}")
-            print(f"  OCR Pages        : {result.ocr_pages}")
-            print(f"  Final Status     : {doc.status}")
+            print(f"  Document ID       : {doc.id}")
+            print(f"  Filename          : {doc.filename}")
+            print(f"  Document Type     : {doc.document_type}")
+            print(f"  Part Number       : {doc.part_number or 'N/A'}")
+            print(f"  Revision          : {doc.revision}")
+            print(f"  Total Pages       : {result.total_pages}")
+            print(f"  Processed Pages   : {result.processed_pages}")
+            print(f"  Native Text Pages : {result.total_pages - result.ocr_pages}")
+            print(f"  OCR Pages         : {result.ocr_pages}")
+            print(f"  Document Status   : {doc.status}")
+            if chunk_info:
+                print(f"  Chunks Created    : {chunk_info.chunks_created}")
+                print(f"  Embeddings Made   : {chunk_info.embeddings_generated}")
+                print(f"  Indexed into Search: {chunk_info.indexed_count}")
+                print(f"  Indexing Status   : {chunk_info.status}")
             print("=" * 60 + "\n")
             return True
 
@@ -85,7 +101,7 @@ async def ingest_single_pdf(file_path: Path, document_type: str = "SPECIFICATION
             return False
 
 
-async def ingest_directory(dir_path: Path, document_type: str = "SPECIFICATION"):
+async def ingest_directory(dir_path: Path, document_type: str = "SPECIFICATION", chunk: bool = True):
     """Scan directory and ingest all candidate PDF documents."""
     pdf_files = list(dir_path.glob("*.pdf")) + list(dir_path.glob("*.PDF"))
     if not pdf_files:
@@ -95,7 +111,7 @@ async def ingest_directory(dir_path: Path, document_type: str = "SPECIFICATION")
     logger.info(f"Found {len(pdf_files)} PDF documents to ingest.")
     success_count = 0
     for pdf_file in pdf_files:
-        if await ingest_single_pdf(pdf_file, document_type=document_type):
+        if await ingest_single_pdf(pdf_file, document_type=document_type, chunk=chunk):
             success_count += 1
 
     logger.info(f"Ingestion batch completed: {success_count}/{len(pdf_files)} succeeded.")
@@ -103,7 +119,7 @@ async def ingest_directory(dir_path: Path, document_type: str = "SPECIFICATION")
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Engineering Document Intelligence Ingestion CLI"
+        description="Engineering Document Intelligence Ingestion & Chunking CLI"
     )
     parser.add_argument(
         "file",
@@ -136,6 +152,13 @@ def main():
         default="A",
         help="Engineering revision identifier (default: A)."
     )
+    parser.add_argument(
+        "--no-chunk",
+        dest="chunk",
+        action="store_false",
+        help="Skip chunk generation and vector indexing after ingestion."
+    )
+    parser.set_defaults(chunk=True)
 
     args = parser.parse_args()
 
@@ -145,17 +168,19 @@ def main():
             file_path,
             document_type=args.document_type,
             part_number=args.part_number,
-            revision=args.revision
+            revision=args.revision,
+            chunk=args.chunk,
         ))
     elif args.source_dir:
         dir_path = Path(args.source_dir).resolve()
-        asyncio.run(ingest_directory(dir_path, document_type=args.document_type))
+        asyncio.run(ingest_directory(dir_path, document_type=args.document_type, chunk=args.chunk))
     else:
         # Default scan data/documents/
         default_dir = ROOT_DIR / "data" / "documents"
         logger.info(f"No specific file provided. Scanning default directory: {default_dir}")
-        asyncio.run(ingest_directory(default_dir, document_type=args.document_type))
+        asyncio.run(ingest_directory(default_dir, document_type=args.document_type, chunk=args.chunk))
 
 
 if __name__ == "__main__":
     main()
+
