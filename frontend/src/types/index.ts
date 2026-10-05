@@ -132,3 +132,59 @@ export interface PaginatedResponse<T> {
   page_size: number;
   total_pages: number;
 }
+
+export interface AgentCitation {
+  citation_id: string;
+  document_id: string;
+  filename: string;
+  page_number: number;
+  chunk_id?: string | null;
+  chunk_index?: number;
+  part_number?: string | null;
+  revision?: string | null;
+  section?: string | null;
+  snippet?: string | null;
+}
+
+export interface ToolExecutionTrace {
+  tool_name: string;
+  status: 'success' | 'error';
+  input_summary?: Record<string, any> | null;
+  output_summary?: Record<string, any> | null;
+  error?: string | null;
+}
+
+export interface AgentQueryRequest {
+  query: string;
+  top_k?: number;
+  filters?: {
+    part_number?: string;
+    revision?: string;
+    document_type?: string;
+  };
+}
+
+export interface AgentResponseData {
+  query: string;
+  answer: string;
+  citations: AgentCitation[];
+  tool_traces: ToolExecutionTrace[];
+  tools_used?: string[];
+  tools_called?: string[];
+  should_abstain: boolean;
+  metadata: {
+    provider?: string;
+    model?: string;
+    latency_ms?: number;
+  };
+}
+
+export interface ConversationTurn {
+  id: string;
+  query: string;
+  timestamp: string;
+  response?: AgentResponseData;
+  loading?: boolean;
+  error?: string;
+}
+

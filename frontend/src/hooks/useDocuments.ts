@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Document, DocumentType, DocumentStatus } from '../types';
+import { Document, DocumentType } from '../types';
 import { documentService, DocumentFilters } from '../services/documentService';
 
 export function useDocuments(initialFilters: DocumentFilters = {}) {

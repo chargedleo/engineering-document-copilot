@@ -2,8 +2,8 @@
 
 A production-grade intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
 
-> **Project Status (Milestone 6 - LangGraph Engineering Copilot Agent)**:
-> Fully operational autonomous agent orchestration layer built on LangGraph. Features genuine multi-tool engineering decision making (`search_engineering_documents`, `get_document_metadata`, `calculate_engineering`), deterministic rule-based planning, dynamic parameter extraction and value chaining from retrieved chunks to downstream calculations, prompt injection defense with passive XML data isolation, standardized abstention, a dedicated REST API (`POST /api/v1/agent/query`), an interactive CLI demonstration (`scripts/query_agent.py`), and 77 passing automated tests.
+> **Project Status (Milestone 7 - Minimal Monochrome Visual Design System)**:
+> Fully operational, production-style typography-led user interface inspired by Linear, Vercel, and Google Antigravity. Strictly black, white, and grayscale with zero accent colors or cartoon AI decorations. Connects directly to the live LangGraph Engineering Copilot Agent API (`POST /api/v1/agent/query`), rendering editorial document-style conversation layouts, typographic calculation result blocks, bordered citations with provenance verification, compact technical tool execution logs, document registry management, CAD viewport schematics, and live system health monitoring.
 
 ---
 
@@ -33,14 +33,18 @@ A production-grade intelligent copilot platform designed for engineering teams t
   - **Dynamic Multi-Tool Chaining**: Resolves engineering values from retrieved PDF chunks into subsequent calculation tools while preserving chunk-level citation links (`[C1]`).
   - **Prompt-Injection Defense**: Untrusted text isolation inside structured `<engineering_context>` XML tags.
   - **Standardized Abstention**: Detects insufficient context and responds with canonical engineering abstention.
+- **Visual Design System & Frontend Architecture (Milestone 7)**:
+  - **React 18 + TypeScript + Vite**: Responsive, mobile-first single-page application.
+  - **Monochrome Design Philosophy**: High-contrast, minimal, typography-led aesthetic inspired by Linear, Vercel, and Google Antigravity. Strictly black, white, and grayscale canvas with zero accent colors (no blue/purple/green badges).
+  - **Editorial Layout**: Document-style conversation streams replacing generic rounded chat bubbles, bordered technical citations (`[C1]`), typographic calculation sheets, and compact technical tool logs.
+  - **Live Agent Integration**: Full end-to-end communication with LangGraph agent (`/api/v1/agent/query`) and live health monitoring.
 - **Database**: PostgreSQL 16 (Local Windows setup at `C:\Users\admin\pgsql`; Docker Compose optional)
-- **Frontend**: [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
 - **Configuration & Validation**: [Pydantic v2](https://docs.pydantic.dev/) and `pydantic-settings`
 - **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (77 hermetic automated tests)
 - **Cloud Integrations (Configuration-Ready)**:
   - *Note on Azure*: Azure OpenAI and Azure AI Search remain configuration-ready adapter options (`AZURE_OPENAI_API_KEY`, `AZURE_SEARCH_ENDPOINT`). In local development and testing, the system runs completely hermetic with offline deterministic providers (`LocalMockChatProvider`, `LocalMockEmbeddingProvider`, `LocalSearchIndex`). Azure OpenAI remains an adapter/configuration option and is not considered live-tested unless credentials and deployment were actually used.
 - **Future Milestone Roadmap**:
-  - CAD Geometry: STEP / DXF geometry parsing and 3D visual navigation (Milestone 7)
+  - CAD Geometry: STEP / DXF geometry parsing and 3D visual navigation (Milestone 8)
 
 For an in-depth architectural breakdown and sequence diagrams, refer to [`architecture.md`](./architecture.md).
 
@@ -95,8 +99,22 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   │   └── test_health.py     # Health & readiness tests (4 tests)
 │   ├── Dockerfile             # Container definition for backend
 │   ├── pyproject.toml         # Python packaging and pytest configuration
-│   └── requirements.txt       # Production & development dependencies (including langgraph)
-├── frontend/                  # React + TypeScript + Vite SPA
+├── frontend/                  # React 18 + TypeScript + Vite SPA (Milestone 7)
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── chat/          # Editorial document-style conversation & input dock
+│   │   │   ├── documents/     # Minimalist document registry table
+│   │   │   ├── cad/           # Architectural technical canvas & BOM attributes
+│   │   │   ├── architecture/  # Editorial system topology view
+│   │   │   ├── layout/        # Minimalist monochrome Header & MainLayout
+│   │   │   └── common/        # High-contrast Badge & Card primitives
+│   │   ├── services/          # API clients (agentService, documentService, api)
+│   │   ├── hooks/             # Reactive state hooks (useChat, useDocuments)
+│   │   ├── types/             # Strict TypeScript definitions
+│   │   ├── App.tsx            # Clean view orchestrator
+│   │   └── index.css          # Monochrome typography-led design system
+│   ├── package.json
+│   └── vite.config.ts         # Reverse-proxy to FastAPI backend (localhost:8000)
 ├── data/                      # Local data storage directories
 │   ├── documents/             # Staged engineering PDFs (data/documents/{id}/{filename})
 │   └── processed/             # Extracted artifacts and temporary files
@@ -232,6 +250,18 @@ Verify service status:
 - Health check: `http://127.0.0.1:8000/api/v1/health`
 - Readiness check (DB connected): `http://127.0.0.1:8000/api/v1/health/ready`
 - Swagger UI docs: `http://127.0.0.1:8000/docs`
+
+### 4. Start React Frontend (Milestone 7)
+
+```powershell
+# From frontend/ directory
+npm install
+npm run dev
+```
+
+The minimalist, typography-led monochrome web interface is accessible at:
+- Web Application: `http://localhost:5173`
+- Reverse proxy routes: `http://localhost:5173/api/v1/*` → `http://localhost:8000/api/v1/*`
 
 ---
 

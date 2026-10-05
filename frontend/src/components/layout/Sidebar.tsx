@@ -1,6 +1,7 @@
 import React from 'react';
+import { ActiveTab } from './Header';
 
-export type ActiveTab = 'chat' | 'documents' | 'cad' | 'architecture';
+export type { ActiveTab };
 
 interface SidebarProps {
   activeTab: ActiveTab;
@@ -9,48 +10,33 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
   return (
-    <aside className="sidebar">
-      <div className="sidebar-header">
-        <span style={{ fontSize: '1.25rem' }}>📐</span>
-        <span>CAD Copilot</span>
-      </div>
-      <nav className="sidebar-nav">
+    <aside style={{ borderRight: '1px solid var(--border-subtle)', padding: '1rem', width: '220px' }}>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <button
-          className={`nav-item ${activeTab === 'chat' ? 'active' : ''}`}
+          className={`nav-link ${activeTab === 'chat' ? 'active' : ''}`}
           onClick={() => onTabChange('chat')}
         >
-          <span>💬</span>
-          <span>Copilot Chat</span>
+          Workspace
         </button>
-
         <button
-          className={`nav-item ${activeTab === 'documents' ? 'active' : ''}`}
+          className={`nav-link ${activeTab === 'documents' ? 'active' : ''}`}
           onClick={() => onTabChange('documents')}
         >
-          <span>📄</span>
-          <span>Documents & Specs</span>
+          Document Registry
         </button>
-
         <button
-          className={`nav-item ${activeTab === 'cad' ? 'active' : ''}`}
+          className={`nav-link ${activeTab === 'cad' ? 'active' : ''}`}
           onClick={() => onTabChange('cad')}
         >
-          <span>🧊</span>
-          <span>CAD Models & BOM</span>
+          CAD Attributes
         </button>
-
         <button
-          className={`nav-item ${activeTab === 'architecture' ? 'active' : ''}`}
+          className={`nav-link ${activeTab === 'architecture' ? 'active' : ''}`}
           onClick={() => onTabChange('architecture')}
         >
-          <span>🏗️</span>
-          <span>Architecture Info</span>
+          Architecture
         </button>
       </nav>
-      <div style={{ padding: '1rem', borderTop: '1px solid var(--border-color)', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        <p>Backend: FastAPI (Async)</p>
-        <p>Storage: PostgreSQL + Azure AI</p>
-      </div>
     </aside>
   );
 };

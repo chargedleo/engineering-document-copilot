@@ -1,6 +1,4 @@
 import React, { useRef } from 'react';
-import { Card } from '../common/Card';
-import { Badge } from '../common/Badge';
 import { useDocuments } from '../../hooks/useDocuments';
 
 export const DocumentList: React.FC = () => {
@@ -22,17 +20,37 @@ export const DocumentList: React.FC = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const getStatusBadge = (status: string) => {
+  const getStatusLabel = (status: string) => {
     switch (status) {
       case 'PROCESSED':
       case 'COMPLETED':
-        return <Badge variant="success">Processed</Badge>;
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 600 }}>
+            <span>●</span>
+            <span>PROCESSED</span>
+          </span>
+        );
       case 'PROCESSING':
-        return <Badge variant="warning">Processing</Badge>;
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-secondary)' }}>
+            <span>○</span>
+            <span>PROCESSING</span>
+          </span>
+        );
       case 'FAILED':
-        return <Badge variant="danger">Failed</Badge>;
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', fontWeight: 700 }}>
+            <span>✕</span>
+            <span>FAILED</span>
+          </span>
+        );
       default:
-        return <Badge variant="info">Pending</Badge>;
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: 'var(--text-muted)' }}>
+            <span>○</span>
+            <span>PENDING</span>
+          </span>
+        );
     }
   };
 
@@ -44,79 +62,118 @@ export const DocumentList: React.FC = () => {
   };
 
   return (
-    <div>
-      <Card
-        title="Engineering Documents & Specifications"
-        subtitle="Manage technical specifications, datasheets, standard manuals, and CAD files staged for indexing."
-        action={
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              onChange={handleFileUpload}
-            />
-            <button className="btn btn-primary" onClick={() => fileInputRef.current?.click()}>
-              <span>⬆️</span> Upload File
-            </button>
-            <button className="btn btn-secondary" onClick={() => refresh()}>
-              Refresh
-            </button>
-          </div>
-        }
-      >
-        {error && (
-          <div style={{ padding: '0.75rem', backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', borderRadius: '4px', marginBottom: '1rem' }}>
-            {error}
-          </div>
-        )}
+    <div className="registry-view">
+      <div className="registry-header">
+        <div>
+          <h1 className="registry-title">Document Registry</h1>
+          <p className="registry-subtitle">
+            Verified engineering specifications, standard manuals, and CAD assemblies staged for indexing.
+          </p>
+        </div>
 
-        {loading && <p style={{ color: 'var(--text-secondary)' }}>Loading documents...</p>}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileUpload}
+          />
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Upload Specification
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            onClick={() => refresh()}
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
 
-        {!loading && documents.length === 0 && (
-          <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-secondary)' }}>
-            <p style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>No engineering documents staged yet.</p>
-            <p style={{ fontSize: '0.9rem' }}>Upload PDF specifications or CAD models (.step, .dxf) to initiate document processing.</p>
-          </div>
-        )}
+      {error && (
+        <div className="abstention-notice">
+          <span className="abstention-heading">Registry Notice</span>
+          <p className="abstention-body">{error}</p>
+        </div>
+      )}
 
-        {!loading && documents.length > 0 && (
-          <table className="data-table">
+      {loading && (
+        <div className="loading-indicator pulse-monochrome">
+          <span>●</span>
+          <span>Loading verified document records...</span>
+        </div>
+      )}
+
+      {!loading && documents.length === 0 && (
+        <div style={{ border: '1px solid var(--border-subtle)', padding: '3.5rem 2rem', textAlign: 'center' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+            No Documents Staged
+          </h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '480px', margin: '0 auto' }}>
+            Upload engineering PDF manuals or CAD specifications to initiate structural chunking, OCR fallback, and hybrid vector indexing.
+          </p>
+        </div>
+      )}
+
+      {!loading && documents.length > 0 && (
+        <div style={{ overflowX: 'auto' }}>
+          <table className="registry-table">
             <thead>
               <tr>
-                <th>Filename</th>
+                <th>Document / Filename</th>
                 <th>Type</th>
                 <th>Part Number</th>
                 <th>Revision</th>
                 <th>Pages</th>
                 <th>Size</th>
                 <th>Status</th>
-                <th>Date Added</th>
+                <th>Registered</th>
               </tr>
             </thead>
             <tbody>
               {documents.map((doc) => (
                 <tr key={doc.id}>
-                  <td style={{ fontWeight: 500 }}>{doc.filename}</td>
-                  <td><Badge variant="info">{doc.document_type || 'SPECIFICATION'}</Badge></td>
-                  <td>{doc.part_number || '-'}</td>
-                  <td>{doc.revision || '-'}</td>
-                  <td>
-                    {doc.metadata_payload?.page_count
-                      ? `${doc.metadata_payload.page_count} ${doc.metadata_payload.ocr_page_count ? `(${doc.metadata_payload.ocr_page_count} OCR)` : ''}`
-                      : '-'}
+                  <td style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                    {doc.filename}
                   </td>
-                  <td>{formatFileSize(doc.file_size_bytes)}</td>
-                  <td>{getStatusBadge(doc.status)}</td>
-                  <td style={{ color: 'var(--text-muted)' }}>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
+                    {doc.document_type || 'SPECIFICATION'}
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontWeight: 600 }}>
+                    {doc.part_number || '—'}
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)' }}>
+                    {doc.revision || '—'}
+                  </td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                    {doc.metadata_payload?.page_count
+                      ? `${doc.metadata_payload.page_count} ${
+                          doc.metadata_payload.ocr_page_count
+                            ? `(${doc.metadata_payload.ocr_page_count} OCR)`
+                            : ''
+                        }`
+                      : '—'}
+                  </td>
+                  <td style={{ fontVariantNumeric: 'tabular-nums', color: 'var(--text-secondary)' }}>
+                    {formatFileSize(doc.file_size_bytes)}
+                  </td>
+                  <td style={{ fontFamily: 'var(--font-mono)', fontSize: '0.78rem' }}>
+                    {getStatusLabel(doc.status)}
+                  </td>
+                  <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                     {new Date(doc.created_at || doc.uploaded_at).toLocaleDateString()}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </Card>
+        </div>
+      )}
     </div>
   );
 };

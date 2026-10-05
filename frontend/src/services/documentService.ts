@@ -1,5 +1,5 @@
 import { request } from './api';
-import { Document, PaginatedResponse, DocumentStatus, DocumentCreateInput, CadMetadata } from '../types';
+import { Document, DocumentPage, PaginatedResponse, DocumentStatus, DocumentCreateInput, CadMetadata } from '../types';
 
 export interface DocumentFilters {
   page?: number;

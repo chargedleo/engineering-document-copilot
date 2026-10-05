@@ -1,79 +1,62 @@
 import { useState, useCallback } from 'react';
-import { ChatMessage, ChatSession } from '../types';
-import { chatService } from '../services/chatService';
+import { ConversationTurn, AgentResponseData } from '../types';
+import { agentService } from '../services/agentService';
 
 export function useChat() {
-  const [currentSession, setCurrentSession] = useState<ChatSession | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [turns, setTurns] = useState<ConversationTurn[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const startNewSession = useCallback(async (title?: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const session = await chatService.createSession(title);
-      setCurrentSession(session);
-      setMessages([]);
-      return session;
-    } catch (err: any) {
-      setError(err.message || 'Failed to initialize session');
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const sendQuery = useCallback(async (
+    query: string,
+    filters?: { part_number?: string; revision?: string }
+  ) => {
+    const trimmed = query.trim();
+    if (!trimmed || loading) return;
 
-  const loadSession = useCallback(async (sessionId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const session = await chatService.getSessionHistory(sessionId);
-      setCurrentSession(session);
-      setMessages(session.messages || []);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load conversation');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const sendMessage = async (query: string, includeCadContext = true) => {
-    if (!query.trim()) return;
-
-    // Optimistically add user query to state
-    const optimisticUserMsg: ChatMessage = {
-      id: `temp-${Date.now()}`,
-      session_id: currentSession?.id || '',
-      role: 'user',
-      content: query,
-      created_at: new Date().toISOString(),
+    const turnId = `turn-${Date.now()}`;
+    const newTurn: ConversationTurn = {
+      id: turnId,
+      query: trimmed,
+      timestamp: new Date().toISOString(),
+      loading: true,
     };
-    setMessages((prev) => [...prev, optimisticUserMsg]);
+
+    setTurns((prev) => [...prev, newTurn]);
     setLoading(true);
+    setError(null);
 
     try {
-      const assistantMsg = await chatService.sendQuery({
-        sessionId: currentSession?.id,
-        query,
-        includeCadContext,
+      const response: AgentResponseData = await agentService.queryAgent({
+        query: trimmed,
+        top_k: 5,
+        filters,
       });
 
-      setMessages((prev) => [...prev, assistantMsg]);
+      setTurns((prev) =>
+        prev.map((t) => (t.id === turnId ? { ...t, loading: false, response } : t))
+      );
     } catch (err: any) {
-      setError(err.message || 'Failed to receive copilot response');
+      const errMsg = err.message || 'Error communicating with Engineering Copilot backend.';
+      setError(errMsg);
+      setTurns((prev) =>
+        prev.map((t) => (t.id === turnId ? { ...t, loading: false, error: errMsg } : t))
+      );
     } finally {
       setLoading(false);
     }
-  };
+  }, [loading]);
+
+  const clearChat = useCallback(() => {
+    setTurns([]);
+    setError(null);
+  }, []);
 
   return {
-    currentSession,
-    messages,
+    turns,
     loading,
     error,
-    startNewSession,
-    loadSession,
-    sendMessage,
+    sendQuery,
+    clearChat,
   };
 }
