@@ -16,7 +16,7 @@ A production-grade intelligent copilot platform designed for engineering teams t
   - **OpenCV (`cv2`)**: Image preprocessing for scanned pages (grayscale conversion, Gaussian noise filtering, Otsu binarization).
   - **Tesseract OCR (`pytesseract`)**: Optical Character Recognition engine for scanned pages and drawing title blocks.
   - **Pillow (`PIL`)**: High-resolution page rendering and image handling.
-- **Database**: PostgreSQL 16 (local or containerized via Docker)
+- **Database**: PostgreSQL 16 (Local Windows setup at `C:\Users\admin\pgsql`; Docker Compose optional)
 - **Frontend**: [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
 - **Configuration & Validation**: [Pydantic v2](https://docs.pydantic.dev/) and `pydantic-settings`
 - **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (24 hermetic automated tests)
@@ -135,12 +135,27 @@ TESSERACT_CMD="C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 ### 1. Database & Migrations
 
-Start PostgreSQL (via Docker or local service on port 5432):
+#### Default: Local Windows PostgreSQL (Installed at `C:\Users\admin\pgsql`)
+
+Start the local PostgreSQL server on port `5432` (run in background or in a separate terminal):
+```powershell
+& "C:\Users\admin\pgsql\bin\postgres.exe" -D "C:\Users\admin\pgsql\data"
+```
+
+If initializing for the first time, create the `engineering_copilot` database:
+```powershell
+$env:PGPASSWORD = "postgres"
+& "C:\Users\admin\pgsql\bin\createdb.exe" -U postgres -h localhost engineering_copilot
+```
+
+#### Optional: Docker Compose (Alternative / Containerized Workflow)
+If running inside a containerized Docker environment instead of the local Windows PostgreSQL installation:
 ```powershell
 docker compose -f docker/docker-compose.dev.yml up db -d
 ```
 
-Run Alembic migrations:
+#### Apply Database Migrations (Alembic)
+With PostgreSQL running on port `5432`:
 ```powershell
 cd backend
 .\.venv\Scripts\Activate.ps1
