@@ -1,6 +1,6 @@
 # ==============================================================================
 # Engineering Document Intelligence & CAD Knowledge Copilot
-# Docker Compose Orchestration (Subdirectory Reference)
+# Root Docker Compose Orchestration (Milestone 8 Productionization)
 # ==============================================================================
 
 services:
@@ -27,7 +27,7 @@ services:
 
   backend:
     build:
-      context: ../backend
+      context: ./backend
       dockerfile: Dockerfile
     container_name: engineering_copilot_backend
     restart: unless-stopped
@@ -54,8 +54,8 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - ../data/documents:/app/data/documents
-      - ../data/processed:/app/data/processed
+      - ./data/documents:/app/data/documents
+      - ./data/processed:/app/data/processed
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 10s
@@ -67,7 +67,7 @@ services:
 
   frontend:
     build:
-      context: ../frontend
+      context: ./frontend
       dockerfile: Dockerfile
     container_name: engineering_copilot_frontend
     restart: unless-stopped

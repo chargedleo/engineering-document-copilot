@@ -1,0 +1,41 @@
+# Python virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python bytecode and cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Testing & code quality caches
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.hypothesis/
+
+# Git and IDE metadata
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Environment files and secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Local logs and temporary files
+*.log
+*.tmp
+temp/
+tmp/
+
+# Local data directories (mount externally via volumes instead)
+data/
+backend/data/

@@ -1,0 +1,23 @@
+# Node dependencies
+node_modules/
+.npm/
+
+# Build artifacts
+dist/
+dist-ssr/
+
+# Environment files and secrets
+.env
+.env.*
+*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Git and IDE metadata
+.git/
+.gitignore
+.vscode/
+.idea/
