@@ -128,13 +128,58 @@ flowchart TB
   - `POST /api/v1/rag/query` exposing grounded engineering question-answering.
   - `scripts/query_rag.py` providing interactive CLI querying with formatted citations.
 
-### 3.6 Autonomous Agent & CAD Extensions (Future Milestones)
-- **LangGraph Multi-Agent Workflows (Milestone 6)**: Multi-turn conversational workflows, tool execution, and human-in-the-loop review.
-- **CAD Geometry Engine (Milestone 7)**: STEP/DXF metadata extraction, BOM cross-referencing, and visual integration.
+### 3.6 LangGraph Engineering Copilot Agent (Milestone 6 Implemented)
+- **Agent Workflow & State Machine**:
+  - Built with [LangGraph](https://python.langchain.com/docs/langgraph) using a typed `CopilotAgentState` (`TypedDict`).
+  - Genuine tool-using agent architecture executing explicit, validated tool calls instead of a single unconstrained retrieval step.
+  - Topology: `START -> classify_and_plan -> execute_tools (conditional) -> synthesize_answer -> END`.
+
+```text
+                     ┌─────────────────────┐
+                     │ LangGraph Agent     │
+                     │                     │
+User Query ─────────→│ Decide / Route      │
+                     └─────────┬───────────┘
+                               │
+                  ┌────────────┼─────────────┐
+                  ↓            ↓             ↓
+             Search Tool   Metadata Tool   Calculator
+                  │            │             │
+                  └────────────┼─────────────┘
+                               ↓
+                        Tool Results
+                               ↓
+                       Grounded LLM
+                               ↓
+                       Final Response
+                               ↓
+                     Citations + Trace
+```
+
+- **Tools Suite**:
+  1. `SearchEngineeringDocumentsTool`: Wraps the existing M4 hybrid retrieval service (BM25 + Dense Vectors + RRF). Preserves page provenance, document ID, filename, chunk index, revision, section, and relevance score.
+  2. `GetDocumentMetadataTool`: Retrieves verified document metadata from PostgreSQL (`Document` entity) including filename, document type, part number, revision, status, page count, and file size.
+  3. `EngineeringCalculatorTool`: Safe, deterministic engineering conversion tool supporting `bar_to_psi`, `psi_to_bar`, `celsius_to_fahrenheit`, `fahrenheit_to_celsius`, `flow_m3h_to_lpm`, `flow_lpm_to_m3h`, `kw_to_hp`, `hp_to_kw`, and `percentage_change`. Never uses `eval()`.
+- **Multi-Tool Composite Chaining**:
+  - Supports queries requiring both document evidence and calculation (e.g., retrieving operating pressure in bar from specifications, then converting to psi).
+  - Citations are strictly attached to document-derived facts, while calculated values are transparently labeled as tool evaluations.
+- **Untrusted Context Boundary**:
+  - Retrieved document contents are isolated as passive untrusted data inside `<engineering_context>`. Malicious prompt-injection instructions embedded in PDFs cannot hijack agent routing or execute unauthorized tools.
+- **Standardized Abstention**:
+  - Reuses the M5 grounding philosophy. When evidence is insufficient or missing, returns `"The available documents do not contain enough information to answer this question."` with `should_abstain = True`.
+- **REST API & CLI**:
+  - `POST /api/v1/agent/query`: Exposes autonomous agent answering with tool execution traces.
+  - `scripts/query_agent.py`: Interactive CLI demonstration tool.
+
+> [!NOTE]
+> Azure OpenAI remains an adapter/configuration option and is not considered live-tested unless credentials and deployment were actually used. Local development and automated testing execute against the deterministic `LocalMockChatProvider`.
+
+### 3.7 CAD Extension (Future Milestone 7)
+- **CAD Geometry Engine**: STEP/DXF metadata extraction, BOM cross-referencing, and 3D visual integration.
 
 ---
 
-## 4. Document Intelligence, Hybrid Search & Grounded RAG Pipeline (Milestones 3, 4 & 5 Implemented)
+## 4. Document Intelligence, Hybrid Search & Grounded RAG Pipeline (Milestones 3, 4, 5 & 6 Implemented)
 
 ```mermaid
 flowchart TD
@@ -159,23 +204,26 @@ flowchart TD
     EmbeddingGen --> SaveChunks[("PostgreSQL 16\n(document_chunks table)")]
     SaveChunks --> IndexSearch["Hybrid Search Index\n(BM25 + Dense Vectors + RRF)"]
 
-    subgraph M5RAGPipeline["Milestone 5: Grounded RAG Pipeline"]
-        UserQ["User Technical Query\n(POST /api/v1/rag/query or query_rag.py)"] --> ValQ["Query Validation & Sanitization"]
-        ValQ --> HybridRet["Hybrid Retrieval\n(BM25 + Vector Cosine + RRF)"]
-        IndexSearch -.-> HybridRet
-        HybridRet --> FilterHits["Threshold Filtering\n(RAG_RELEVANCE_THRESHOLD >= 0.01)"]
-        FilterHits --> AssemCtx["Context Assembly\n(<engineering_context> + [C1] Tags)"]
-        AssemCtx --> LLMGen["LLM Provider Synthesis\n(LocalMock / Azure OpenAI GPT-4o)"]
-        LLMGen --> CitParse["Citation Extraction &\nSufficiency Verification"]
-        CitParse --> FinalAnswer["Grounded Response\n(Answer + Citations + Provenance)"]
+    subgraph M6AgentPipeline["Milestone 6: LangGraph Agent Orchestrator"]
+        UserQ["User Technical Query\n(POST /api/v1/agent/query or query_agent.py)"] --> Planner["classify_and_plan Node\n(Detects Search, Metadata, Calc, Multi-Tool)"]
+        Planner --> Dispatch{"Tools Needed?"}
+        Dispatch -- Yes --> ExecTools["execute_tools Node"]
+        Dispatch -- No --> Synthesize["synthesize_answer Node"]
+        ExecTools --> Tool1["Search Tool\n(Hybrid RRF)"]
+        ExecTools --> Tool2["Metadata Tool\n(PostgreSQL Document)"]
+        ExecTools --> Tool3["Calculator Tool\n(Deterministic Units)"]
+        Tool1 & Tool2 & Tool3 --> Synthesize
+        Synthesize --> AgentOutput["Agent Response\n(Grounded Answer + Citations + Tool Traces)"]
     end
 
+    IndexSearch -.-> Tool1
+    PostgresPages -.-> Tool2
+
     subgraph FuturePhases["Future Milestones (Strictly Decoupled)"]
-        LangGraph["LangGraph Multi-Agent Orchestrator (Milestone 6)"]
         CAD["CAD Geometry Engine (Milestone 7)"]
     end
 
-    FinalAnswer -.-> FuturePhases
+    AgentOutput -.-> FuturePhases
 ```
 
 ---
@@ -186,9 +234,10 @@ flowchart TD
 2. **Path Traversal Protection**: Uploaded filenames are sanitized with basename isolation to prevent directory traversal attacks (`../../`).
 3. **Information Disclosure Prevention**: Global exception handlers redact absolute filesystem paths, database connection strings, and stack traces from API responses.
 4. **Untrusted Context Isolation**: Retrieved document text is treated strictly as passive, untrusted data wrapped in XML boundaries to defend against prompt injections.
-5. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
-6. **Structured Logging**: Contextual logs with query tokens, hit counts, latency, and provenance without logging raw sensitive engineering documents.
-7. **Graceful Degradation**: Dual provider architecture allows local development and automated testing with zero cloud credentials, automatically promoting to Azure OpenAI and Azure AI Search when credentials are provided.
+5. **Deterministic Tool Execution**: The engineering calculator uses explicit operation dispatch and never uses `eval()`, preventing arbitrary code execution.
+6. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
+7. **Structured Logging**: Contextual logs with query tokens, hit counts, latency, and tool traces without logging raw sensitive engineering documents.
+8. **Graceful Degradation**: Dual provider architecture allows local development and automated testing with zero cloud credentials, automatically promoting to Azure OpenAI and Azure AI Search when credentials are provided.
 
 ---
 
@@ -200,8 +249,8 @@ flowchart TD
 | **Milestone 2** | **Backend Foundation**: Asynchronous FastAPI, layered Service architecture, async SQLAlchemy 2.0 with PostgreSQL, bidirectional Alembic migrations, foundational Document metadata API (`GET`, `POST`), structured error handlers, and hermetic automated pytest suite. Azure OpenAI & AI Search configurations are decoupled and optional. | Completed |
 | **Milestone 3** | **Document Intelligence Pipeline**: Page-by-page PDF processing with PyMuPDF, scanned page detection heuristic, OpenCV image preprocessing, Tesseract OCR fallback, 1-based `DocumentPage` persistence in PostgreSQL, file upload endpoint (`POST /upload`), page retrieval APIs (`GET /pages`, `GET /pages/{num}`), CLI ingestion tool (`ingest_cad_docs.py`), and 24 passing automated tests. | Completed |
 | **Milestone 4** | **Document Chunking & Hybrid Vector Search**: Structural/semantic engineering chunker preserving engineering notation, tolerances, units, and page provenance; 1536-dimensional vector embedding architecture with deterministic offline mock and Azure OpenAI client; hybrid BM25 + vector search engine with Reciprocal Rank Fusion (RRF); `DocumentChunk` schema and Alembic migrations; chunk generation and search API endpoints (`/chunks/generate`, `/chunks`, `/search`); CLI retrieval tool (`search_docs.py`); and 41 passing automated tests. | Completed |
-| **Milestone 5** (Current) | **Retrieval-Augmented Generation (RAG)**: Grounded question-answering system combining hybrid retrieval with LLM synthesis; dual LLM provider layer (`BaseLLMProvider`, `LocalMockChatProvider`, `AzureOpenAIChatProvider`); structured evidence context assembly with citation tagging (`[C1]`, `[C2]`); strict unit/tolerance/part-number fidelity; prompt injection defense with untrusted context isolation; explicit abstention protocol (`sufficient_evidence=False`); REST endpoint `POST /api/v1/rag/query`; CLI tool `scripts/query_rag.py`; and 56 passing automated tests. | Completed |
-| **Milestone 6** | **LangGraph Copilot Agent**: Multi-turn dialogue, tool execution, citation generation with page-level verification loop, and human-in-the-loop engineering reviews. | Planned |
+| **Milestone 5** | **Retrieval-Augmented Generation (RAG)**: Grounded question-answering system combining hybrid retrieval with LLM synthesis; dual LLM provider layer (`BaseLLMProvider`, `LocalMockChatProvider`, `AzureOpenAIChatProvider`); structured evidence context assembly with citation tagging (`[C1]`, `[C2]`); strict unit/tolerance/part-number fidelity; prompt injection defense with untrusted context isolation; explicit abstention protocol (`sufficient_evidence=False`); REST endpoint `POST /api/v1/rag/query`; CLI tool `scripts/query_rag.py`; and 56 passing automated tests. | Completed |
+| **Milestone 6** (Current) | **LangGraph Engineering Copilot Agent**: Autonomous stateful agent workflow orchestrated with LangGraph; genuine tool usage across three tools (`search_engineering_documents`, `get_document_metadata`, and safe `calculate_engineering`); multi-tool chaining for technical queries requiring calculation; citation provenance preservation; prompt-injection containment; standardized abstention; REST API `POST /api/v1/agent/query`; CLI tool `scripts/query_agent.py`; and 77 passing automated tests. | Completed |
 | **Milestone 7** | **CAD Extension**: STEP/DXF metadata extraction, BOM cross-referencing, and 3D visual integration. | Planned |
 
 

@@ -23,11 +23,8 @@ pytesseract>=0.3.10
 opencv-python>=4.9.0
 Pillow>=10.3.0
 
-# Future AI & Search Orchestration (Dependencies ready for integration)
-# langgraph>=0.0.60
-# langchain>=0.2.0
-# langchain-openai>=0.1.7
-# azure-search-documents>=11.4.0
+# AI & Agent Orchestration (Milestone 6)
+langgraph>=0.2.0,<2.0.0
 
 # Testing & Quality
 pytest>=8.2.0

@@ -1,25 +1,43 @@
 from typing import TypedDict, List, Dict, Any, Optional
 
 
+class ToolCall(TypedDict, total=False):
+    tool: str
+    args: Dict[str, Any]
+
+
+class ToolResult(TypedDict, total=False):
+    tool: str
+    status: str
+    output: Any
+    error: Optional[str]
+
+
 class CopilotAgentState(TypedDict, total=False):
     """
-    Typed state representation for LangGraph multi-agent orchestration.
-    Maintains user query, retrieved document chunks, CAD nodes, and synthesized answers.
+    Typed state representation for LangGraph Engineering Copilot Agent.
+    Maintains user query, tool decisions, execution traces, retrieved chunks,
+    grounded citations, calculations, and final answer.
     """
     session_id: str
     user_query: str
-    document_ids: Optional[List[str]]
-    include_cad_context: bool
+    top_k: int
+    filters: Optional[Dict[str, Any]]
 
-    # Retrieval outcomes
+    # Tool calls & execution
+    tool_calls: List[Dict[str, Any]]
+    tool_results: List[Dict[str, Any]]
+    tools_used: List[str]
+
+    # Retrieval outcomes & calculations
+    retrieved_chunks: List[Dict[str, Any]]
     retrieved_documents: List[Dict[str, Any]]
-    retrieved_cad_metadata: List[Dict[str, Any]]
-
-    # Agent reasoning steps & citations
-    reasoning_traces: List[str]
     citations: List[Dict[str, Any]]
-    cad_references: List[Dict[str, Any]]
+    calculation_results: List[Dict[str, Any]]
+    metadata_results: Optional[Dict[str, Any]]
 
-    # Final response
+    # Final response & status
     final_answer: str
+    should_abstain: bool
     error: Optional[str]
+    execution_metadata: Dict[str, Any]

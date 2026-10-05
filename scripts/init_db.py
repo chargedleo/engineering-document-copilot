@@ -24,23 +24,29 @@ logger = logging.getLogger(__name__)
 
 def run_migrations():
     """Apply Alembic migrations to upgrade database to head."""
-    alembic_ini_path = os.path.join(backend_dir, "alembic.ini")
-    logger.info(f"Loading Alembic configuration from {alembic_ini_path}...")
-    alembic_cfg = Config(alembic_ini_path)
-    alembic_cfg.set_main_option("script_location", os.path.join(backend_dir, "alembic"))
+    orig_cwd = os.getcwd()
+    try:
+        os.chdir(backend_dir)
+        alembic_ini_path = "alembic.ini"
+        logger.info(f"Loading Alembic configuration from {alembic_ini_path}...")
+        alembic_cfg = Config(alembic_ini_path)
 
-    if sys.platform == "win32":
-        import asyncio
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+        if sys.platform == "win32":
+            import asyncio
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-    logger.info("Applying migrations (alembic upgrade head)...")
-    command.upgrade(alembic_cfg, "head")
-    logger.info("Database schema initialized and updated to head successfully via Alembic.")
+        logger.info("Applying migrations (alembic upgrade head)...")
+        command.upgrade(alembic_cfg, "head")
+        print("Database schema initialized and updated to head successfully via Alembic.")
+    finally:
+        os.chdir(orig_cwd)
 
 
 if __name__ == "__main__":
     try:
         run_migrations()
     except Exception as e:
-        logger.error(f"Failed to initialize database via migrations: {e}")
+        import traceback
+        traceback.print_exc()
+        print(f"Failed to initialize database via migrations: {e}")
         sys.exit(1)

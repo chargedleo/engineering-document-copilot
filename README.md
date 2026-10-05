@@ -2,8 +2,8 @@
 
 A production-grade intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
 
-> **Project Status (Milestone 5 - Grounded Retrieval-Augmented Generation / RAG)**:
-> Fully operational grounded question-answering pipeline connecting hybrid retrieval to LLM synthesis with document, page, and chunk-level citations. Features a dual LLM provider layer (deterministic offline mock and Azure OpenAI `gpt-4o`), structural context assembly with passive XML data isolation to neutralize prompt injection attacks, strict engineering unit/tolerance/part-number fidelity, explicit evidence sufficiency checks with standardized abstention, a dedicated REST API (`POST /api/v1/rag/query`), interactive CLI (`scripts/query_rag.py`), and 56 passing automated tests.
+> **Project Status (Milestone 6 - LangGraph Engineering Copilot Agent)**:
+> Fully operational autonomous agent orchestration layer built on LangGraph. Features genuine multi-tool engineering decision making (`search_engineering_documents`, `get_document_metadata`, `calculate_engineering`), deterministic rule-based planning, dynamic parameter extraction and value chaining from retrieved chunks to downstream calculations, prompt injection defense with passive XML data isolation, standardized abstention, a dedicated REST API (`POST /api/v1/agent/query`), an interactive CLI demonstration (`scripts/query_agent.py`), and 77 passing automated tests.
 
 ---
 
@@ -24,12 +24,22 @@ A production-grade intelligent copilot platform designed for engineering teams t
   - **Context Assembly**: `ContextBuilder` structuring candidate hits above relevance threshold into `<engineering_context>` evidence blocks with `[C1]`, `[C2]` citation tracking.
   - **Untrusted Context Boundary**: Strict passive data isolation preventing prompt injections embedded in PDF files from hijacking LLM instructions.
   - **Standardized Abstention**: Explicit sufficiency check returning `"The available documents do not contain enough information to answer this question."` when evidence is missing.
+- **Agentic Copilot & Tool Orchestration (Milestone 6)**:
+  - **LangGraph**: `StateGraph` workflow (`classify_and_plan` -> `execute_tools` -> `synthesize_answer`) with typed state (`CopilotAgentState`), conditional execution, and dependency injection of `AsyncSession` via `RunnableConfig`.
+  - **Engineering Tool Suite**:
+    - `search_engineering_documents`: Wrapped M4 hybrid search engine with part number and revision filtering.
+    - `get_document_metadata`: Database metadata querying for revision, page counts, processing status, and timestamps.
+    - `calculate_engineering`: Isolated, unit-safe engineering calculations (bar/psi, Celsius/Fahrenheit, m³/h / LPM, kW/HP, percentage change) without arbitrary code execution.
+  - **Dynamic Multi-Tool Chaining**: Resolves engineering values from retrieved PDF chunks into subsequent calculation tools while preserving chunk-level citation links (`[C1]`).
+  - **Prompt-Injection Defense**: Untrusted text isolation inside structured `<engineering_context>` XML tags.
+  - **Standardized Abstention**: Detects insufficient context and responds with canonical engineering abstention.
 - **Database**: PostgreSQL 16 (Local Windows setup at `C:\Users\admin\pgsql`; Docker Compose optional)
 - **Frontend**: [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
 - **Configuration & Validation**: [Pydantic v2](https://docs.pydantic.dev/) and `pydantic-settings`
-- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (56 hermetic automated tests)
-- **Future Integrations (Configuration-Ready)**:
-  - Orchestration: [LangGraph](https://python.langchain.com/docs/langgraph) Multi-Agent Workflows (Milestone 6)
+- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (77 hermetic automated tests)
+- **Cloud Integrations (Configuration-Ready)**:
+  - *Note on Azure*: Azure OpenAI and Azure AI Search remain configuration-ready adapter options (`AZURE_OPENAI_API_KEY`, `AZURE_SEARCH_ENDPOINT`). In local development and testing, the system runs completely hermetic with offline deterministic providers (`LocalMockChatProvider`, `LocalMockEmbeddingProvider`, `LocalSearchIndex`). Azure OpenAI remains an adapter/configuration option and is not considered live-tested unless credentials and deployment were actually used.
+- **Future Milestone Roadmap**:
   - CAD Geometry: STEP / DXF geometry parsing and 3D visual navigation (Milestone 7)
 
 For an in-depth architectural breakdown and sequence diagrams, refer to [`architecture.md`](./architecture.md).
@@ -51,26 +61,41 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   │   │   └── 20261005_e77ce6df94e3_add_document_chunks.py
 │   │   └── env.py             # Async Alembic runner
 │   ├── app/
-│   │   ├── api/v1/            # Versioned API routes (health, documents, search, rag, cad, chat)
+│   │   ├── api/v1/            # Versioned API routes (health, documents, search, rag, agent, cad, chat)
+│   │   │   ├── endpoints/     # Route handlers (agent.py, rag.py, search.py, documents.py)
+│   │   │   └── router.py      # Aggregated API router
 │   │   ├── core/              # Config (Pydantic Settings), DB session, logging
 │   │   ├── models/            # SQLAlchemy ORM models (Document, DocumentPage, DocumentChunk)
-│   │   ├── schemas/           # Pydantic v2 schemas (document, chunk, rag, common)
+│   │   ├── schemas/           # Pydantic v2 schemas (document, chunk, rag, agent, common)
 │   │   ├── services/          # Business logic layer
 │   │   │   ├── document_service.py
 │   │   │   ├── search_service.py   # Hybrid retrieval & query orchestration
 │   │   │   ├── rag_service.py      # Grounded RAG synthesis & citation engine
+│   │   │   ├── agent_service.py    # LangGraph agent orchestration service
 │   │   │   ├── chunking/           # Structural engineering chunker
 │   │   │   ├── embeddings/         # Embedding providers (LocalMock, Azure OpenAI)
 │   │   │   ├── search/             # Hybrid search indices (LocalIndex, AzureSearchIndex)
 │   │   │   ├── llm/                # LLM providers (LocalMock, Azure OpenAI REST)
 │   │   │   ├── rag/                # Context builder & prompt engineering
 │   │   │   └── document_processing/# PyMuPDF text extractor & OCR pipeline
-│   │   ├── agents/            # LangGraph agent stubs (for future milestone)
+│   │   ├── agents/            # LangGraph agent orchestration (Milestone 6)
+│   │   │   ├── tools/         # Engineering tools (search, metadata, calculator)
+│   │   │   ├── graph.py       # Compiled StateGraph workflow
+│   │   │   ├── nodes.py       # State transition nodes (plan, execute, synthesize)
+│   │   │   ├── planner.py     # Deterministic query planner & tool router
+│   │   │   └── state.py       # Typed CopilotAgentState & ToolCall/Result models
 │   │   └── integrations/      # Azure connectors (optional)
-│   ├── tests/                 # Hermetic automated test suite (56 pytest tests)
+│   ├── tests/                 # Hermetic automated test suite (77 pytest tests)
+│   │   ├── test_agent.py      # LangGraph agent & multi-tool test suite (21 tests)
+│   │   ├── test_rag.py        # Grounded RAG & prompt injection test suite (15 tests)
+│   │   ├── test_search.py     # Hybrid retrieval test suite (11 tests)
+│   │   ├── test_chunking.py   # Engineering chunker tests (6 tests)
+│   │   ├── test_document_processing.py # PDF & OCR processing tests (10 tests)
+│   │   ├── test_documents.py  # Document CRUD & upload tests (10 tests)
+│   │   └── test_health.py     # Health & readiness tests (4 tests)
 │   ├── Dockerfile             # Container definition for backend
 │   ├── pyproject.toml         # Python packaging and pytest configuration
-│   └── requirements.txt       # Production & development dependencies
+│   └── requirements.txt       # Production & development dependencies (including langgraph)
 ├── frontend/                  # React + TypeScript + Vite SPA
 ├── data/                      # Local data storage directories
 │   ├── documents/             # Staged engineering PDFs (data/documents/{id}/{filename})
@@ -80,7 +105,8 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   ├── seed_data.py           # Sample engineering document seeder
 │   ├── ingest_cad_docs.py     # Ingestion & chunking CLI with progress reporting
 │   ├── search_docs.py         # Keyword, vector, and hybrid search CLI
-│   └── query_rag.py           # Grounded RAG question-answering CLI with citations
+│   ├── query_rag.py           # Grounded RAG question-answering CLI with citations
+│   └── query_agent.py         # LangGraph engineering copilot agent CLI
 └── docker/                    # Docker Compose orchestration
 ```
 
@@ -179,36 +205,20 @@ alembic upgrade head
 The test suite runs hermetically using in-memory SQLite (`aiosqlite`) and does not alter your PostgreSQL database:
 ```powershell
 # From backend/ directory
-pytest tests/ -v
+.\.venv\Scripts\pytest.exe tests/ -v
 ```
 
 Expected output:
 ```text
-tests/test_document_processing.py::test_pdf_validation_success PASSED
-tests/test_document_processing.py::test_pdf_validation_empty_file PASSED
-tests/test_document_processing.py::test_pdf_validation_invalid_header PASSED
-tests/test_document_processing.py::test_pdf_validation_corrupted_structure PASSED
-tests/test_document_processing.py::test_text_normalization_preserves_engineering_notation PASSED
-tests/test_document_processing.py::test_native_text_sufficiency_heuristic PASSED
-tests/test_document_processing.py::test_process_text_pdf_page_by_page PASSED
-tests/test_document_processing.py::test_opencv_preprocessing PASSED
-tests/test_document_processing.py::test_tesseract_discovery PASSED
-tests/test_document_processing.py::test_ocr_processing_fallback_on_scanned_pdf PASSED
-tests/test_documents.py::test_create_document_metadata_success PASSED
-tests/test_documents.py::test_get_document_by_id_success PASSED
-tests/test_documents.py::test_get_document_not_found PASSED
-tests/test_documents.py::test_list_documents_pagination_and_filter PASSED
-tests/test_documents.py::test_create_document_validation_failure PASSED
-tests/test_documents.py::test_upload_document_pdf_success PASSED
-tests/test_documents.py::test_get_document_single_page PASSED
-tests/test_documents.py::test_upload_invalid_file_extension PASSED
-tests/test_documents.py::test_upload_empty_pdf_file PASSED
-tests/test_documents.py::test_upload_invalid_pdf_header PASSED
-tests/test_health.py::test_health_endpoint PASSED
-tests/test_health.py::test_readiness_endpoint_connected PASSED
-tests/test_health.py::test_readiness_endpoint_db_failure PASSED
-tests/test_health.py::test_swagger_docs_accessible PASSED
-============================= 24 passed in 5.14s =============================
+tests/test_agent.py (21 tests) .....................                     PASSED
+tests/test_chunking.py (6 tests) ......                                  PASSED
+tests/test_document_processing.py (10 tests) ..........                  PASSED
+tests/test_documents.py (10 tests) ..........                            PASSED
+tests/test_health.py (4 tests) ....                                      PASSED
+tests/test_rag.py (15 tests) ...............                             PASSED
+tests/test_search.py (11 tests) ...........                              PASSED
+
+============================= 77 passed in 7.14s =============================
 ```
 
 ### 3. Start FastAPI Server
@@ -450,6 +460,154 @@ Output:
 
 ---
 
+### Autonomous Engineering Copilot via LangGraph CLI (Milestone 6)
+Execute autonomous question-answering with tool selection, execution traces, dynamic calculations, and grounded engineering citations:
+
+```powershell
+python scripts/query_agent.py "<engineering_question>"
+```
+
+Supported CLI options:
+- `--top-k`: Maximum candidate chunks to retrieve and evaluate (default: 5).
+- `--part-number`: Optional engineering part number filter (e.g., `CFP-402-316L`).
+- `--revision`: Optional document revision filter (e.g., `D`).
+
+#### Example 1: Multi-Tool Composite Workflow (Search + Dynamic Engineering Unit Conversion)
+The agent recognizes that the query requires retrieving an engineering specification and converting its units into psi:
+```powershell
+python scripts/query_agent.py "What is the maximum working pressure of CFP-402-316L in psi?"
+```
+Output:
+```text
+================================================================================
+  ATLAS COPCO GECIA - ENGINEERING COPILOT (LANGGRAPH AGENT)
+================================================================================
+  QUESTION    : What is the maximum working pressure of CFP-402-316L in psi?
+  PROVIDER    : local_mock (mock-engineering-llm-v1)
+  STATUS      : Grounded Synthesis Complete
+  LATENCY     : 327.8 ms
+  TOOLS USED  : search_engineering_documents, calculate_engineering
+--------------------------------------------------------------------------------
+  TOOL EXECUTION TRACE:
+    [1] [OK] search_engineering_documents
+        Input  : {'query': 'What is the maximum working pressure of CFP-402-316L in psi?', 'top_k': 5, 'part_number': 'CFP-402-316L'}
+        Output : {'success': True, 'query': 'What is the maximum working pressure of CFP-402-316L in psi?', 'total_results': 5, 'retrieval_mode': 'hybrid', 'hits_count': 5}
+    [2] [OK] calculate_engineering
+        Input  : {'operation': 'bar_to_psi'}
+        Output : {'success': True, 'operation': 'bar_to_psi', 'input': 16.0, 'result': 232.06, 'unit': 'psi', 'explanation': '16.0 bar * 14.50377 psi/bar ~= 232.06 psi'}
+--------------------------------------------------------------------------------
+
+  ANSWER:
+
+    The maximum working pressure for CFP-402-316L is 16.0 bar (232 psi) at 20 C [C1].
+    Using the engineering conversion tool, this corresponds to approximately 232.06 psi (16.0 bar * 14.50377 psi/bar ~= 232.06 psi).
+
+--------------------------------------------------------------------------------
+  GROUNDED CITATIONS (1 verified):
+
+  [C1] sample_pump_spec.pdf (Page 1, Chunk #0 | Part: CFP-402-316L, Rev: D, Section: CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION)
+      Excerpt:
+        CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION
+        Document ID: SPEC-PUMP-402-REV-D
+        Part Number: CFP-402-316L
+        ...
+================================================================================
+```
+
+#### Example 2: Specification Search with Direct Engineering Citation
+The agent selects `search_engineering_documents` to locate running clearances and tolerances:
+```powershell
+python scripts/query_agent.py "What is the radial bearing journal tolerance?"
+```
+Output:
+```text
+  ANSWER:
+    The radial bearing journal tolerance is ISO h6 (-0.000 / -0.016 mm) [C1].
+
+  GROUNDED CITATIONS (1 verified):
+  [C1] sample_pump_spec.pdf (Page 2, Chunk #2 | Section: CFP-402 MECHANICAL CLEARANCES & ASSEMBLY SPECIFICATIONS)
+```
+
+#### Example 3: Document Metadata Registry Lookup
+The agent detects a metadata query and calls `get_document_metadata` directly against the database:
+```powershell
+python scripts/query_agent.py "What is the document revision and status for sample_pump_spec.pdf?"
+```
+Output:
+```text
+================================================================================
+  ATLAS COPCO GECIA - ENGINEERING COPILOT (LANGGRAPH AGENT)
+================================================================================
+  QUESTION    : What is the document revision and status for sample_pump_spec.pdf?
+  PROVIDER    : local_mock (mock-engineering-llm-v1)
+  STATUS      : Grounded Synthesis Complete
+  LATENCY     : 437.1 ms
+  TOOLS USED  : get_document_metadata
+--------------------------------------------------------------------------------
+  TOOL EXECUTION TRACE:
+    [1] [OK] get_document_metadata
+        Input  : {'filename': 'sample_pump_spec.pdf'}
+        Output : {'success': True, 'found': True, 'document_id': '95ba61ff-d218-4eb7-8d53-f5318f9f1da1', 'filename': 'sample_pump_spec.pdf', 'document_type': 'SPECIFICATION', 'part_number': 'CFP-402-316L', 'revision': 'D', 'status': 'PROCESSED', 'page_count': 3, 'file_size_bytes': 1206071}
+--------------------------------------------------------------------------------
+
+  ANSWER:
+
+    According to verified engineering document metadata, document 'sample_pump_spec.pdf' (Part Number: CFP-402-316L) is currently at Revision D with status 'PROCESSED' and contains 3 pages [C1].
+
+--------------------------------------------------------------------------------
+  GROUNDED CITATIONS (1 verified):
+
+  [C1] sample_pump_spec.pdf (Page 1, Chunk #0 | Part: CFP-402-316L, Rev: D, Section: DOCUMENT METADATA REGISTRY)
+================================================================================
+```
+
+#### Example 4: Direct Engineering Unit Conversion
+The agent executes isolated numerical conversion via `calculate_engineering` without retrieving irrelevant documents:
+```powershell
+python scripts/query_agent.py "Convert 75 kW to horsepower"
+```
+Output:
+```text
+  ANSWER:
+    75.0 kW * 1.34102 hp/kW ~= 100.58 hp
+
+  TOOLS USED: calculate_engineering
+  GROUNDED CITATIONS: None (Abstained or pure mathematical calculation)
+```
+
+#### Example 5: Abstention / Insufficient Evidence Query
+When queried on specifications not present in the engineering corpus:
+```powershell
+python scripts/query_agent.py "What is the titanium wing spar yield strength?"
+```
+Output:
+```text
+================================================================================
+  ATLAS COPCO GECIA - ENGINEERING COPILOT (LANGGRAPH AGENT)
+================================================================================
+  QUESTION    : What is the titanium wing spar yield strength?
+  PROVIDER    : local_mock (mock-engineering-llm-v1)
+  STATUS      : Abstained / Insufficient Evidence
+  LATENCY     : 349.1 ms
+  TOOLS USED  : search_engineering_documents
+--------------------------------------------------------------------------------
+  TOOL EXECUTION TRACE:
+    [1] [OK] search_engineering_documents
+        Input  : {'query': 'What is the titanium wing spar yield strength?', 'top_k': 5}
+        Output : {'success': True, 'query': 'What is the titanium wing spar yield strength?', 'total_results': 5, 'retrieval_mode': 'hybrid', 'hits_count': 5}
+--------------------------------------------------------------------------------
+
+  ANSWER:
+
+    The available documents do not contain enough information to answer this question.
+
+--------------------------------------------------------------------------------
+  GROUNDED CITATIONS: None (Abstained or pure mathematical calculation)
+================================================================================
+```
+
+---
+
 ## 📡 API Reference
 
 ### 1. Document Ingestion & Page Extraction (Milestone 3)
@@ -619,4 +777,193 @@ Response:
   }
 }
 ```
+
+---
+
+### 4. Agentic Copilot & Multi-Tool Execution (Milestone 6)
+
+#### Query Autonomous Engineering Copilot
+`POST /api/v1/agent/query`
+
+Orchestrates multi-tool execution (document search, metadata lookup, unit calculations), dynamic chained parameter passing, and grounded synthesis with citation tracking.
+
+##### Request (Multi-Tool Query with Part Filter):
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/agent/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the maximum working pressure of CFP-402-316L in psi?",
+    "top_k": 5,
+    "filters": {
+      "part_number": "CFP-402-316L"
+    }
+  }'
+```
+
+##### Response:
+```json
+{
+  "success": true,
+  "message": "Agent query executed successfully.",
+  "data": {
+    "query": "What is the maximum working pressure of CFP-402-316L in psi?",
+    "answer": "The maximum working pressure for CFP-402-316L is 16.0 bar (232 psi) at 20 C [C1].\nUsing the engineering conversion tool, this corresponds to approximately 232.06 psi (16.0 bar * 14.50377 psi/bar ~= 232.06 psi).",
+    "citations": [
+      {
+        "citation_id": "C1",
+        "document_id": "95ba61ff-d218-4eb7-8d53-f5318f9f1da1",
+        "filename": "sample_pump_spec.pdf",
+        "page_number": 1,
+        "chunk_id": "8d212ab3-982e-4e55-b62a-b9d50c8b78a5",
+        "chunk_index": 0,
+        "part_number": "CFP-402-316L",
+        "revision": "D",
+        "section": "CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION",
+        "snippet": "CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION\nDocument ID: SPEC-PUMP-402-REV-D\nPart Number: CFP-402-316L\nRevision: D..."
+      }
+    ],
+    "tool_traces": [
+      {
+        "tool_name": "search_engineering_documents",
+        "status": "success",
+        "input_summary": {
+          "query": "What is the maximum working pressure of CFP-402-316L in psi?",
+          "top_k": 5,
+          "part_number": "CFP-402-316L"
+        },
+        "output_summary": {
+          "success": true,
+          "hits_count": 5,
+          "retrieval_mode": "hybrid"
+        },
+        "error": null
+      },
+      {
+        "tool_name": "calculate_engineering",
+        "status": "success",
+        "input_summary": {
+          "operation": "bar_to_psi"
+        },
+        "output_summary": {
+          "success": true,
+          "operation": "bar_to_psi",
+          "input": 16.0,
+          "result": 232.06,
+          "unit": "psi",
+          "explanation": "16.0 bar * 14.50377 psi/bar ~= 232.06 psi"
+        },
+        "error": null
+      }
+    ],
+    "tools_called": [
+      "search_engineering_documents",
+      "calculate_engineering"
+    ],
+    "should_abstain": false,
+    "metadata": {
+      "provider": "local_mock",
+      "model": "mock-engineering-llm-v1",
+      "latency_ms": 327.8
+    }
+  }
+}
+```
+
+##### Metadata Lookup Query:
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/agent/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the document revision and status for sample_pump_spec.pdf?"
+  }'
+```
+Response:
+```json
+{
+  "success": true,
+  "message": "Agent query executed successfully.",
+  "data": {
+    "query": "What is the document revision and status for sample_pump_spec.pdf?",
+    "answer": "According to verified engineering document metadata, document 'sample_pump_spec.pdf' (Part Number: CFP-402-316L) is currently at Revision D with status 'PROCESSED' and contains 3 pages [C1].",
+    "citations": [
+      {
+        "citation_id": "C1",
+        "document_id": "95ba61ff-d218-4eb7-8d53-f5318f9f1da1",
+        "filename": "sample_pump_spec.pdf",
+        "page_number": 1,
+        "chunk_id": null,
+        "chunk_index": 0,
+        "part_number": "CFP-402-316L",
+        "revision": "D",
+        "section": "DOCUMENT METADATA REGISTRY",
+        "snippet": "Filename: sample_pump_spec.pdf | Part: CFP-402-316L | Rev: D | Status: PROCESSED | Pages: 3"
+      }
+    ],
+    "tool_traces": [
+      {
+        "tool_name": "get_document_metadata",
+        "status": "success",
+        "input_summary": {
+          "filename": "sample_pump_spec.pdf"
+        },
+        "output_summary": {
+          "success": true,
+          "found": true,
+          "revision": "D",
+          "status": "PROCESSED",
+          "page_count": 3
+        },
+        "error": null
+      }
+    ],
+    "tools_called": [
+      "get_document_metadata"
+    ],
+    "should_abstain": false,
+    "metadata": {
+      "provider": "local_mock",
+      "model": "mock-engineering-llm-v1",
+      "latency_ms": 437.1
+    }
+  }
+}
+```
+
+##### Abstention Response:
+```json
+{
+  "success": true,
+  "message": "Agent query executed successfully.",
+  "data": {
+    "query": "What is the titanium wing spar yield strength?",
+    "answer": "The available documents do not contain enough information to answer this question.",
+    "citations": [],
+    "tool_traces": [
+      {
+        "tool_name": "search_engineering_documents",
+        "status": "success",
+        "input_summary": {
+          "query": "What is the titanium wing spar yield strength?",
+          "top_k": 5
+        },
+        "output_summary": {
+          "success": true,
+          "hits_count": 5
+        },
+        "error": null
+      }
+    ],
+    "tools_called": [
+      "search_engineering_documents"
+    ],
+    "should_abstain": true,
+    "metadata": {
+      "provider": "local_mock",
+      "model": "mock-engineering-llm-v1",
+      "latency_ms": 349.1
+    }
+  }
+}
+```
+
 
