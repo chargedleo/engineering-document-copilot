@@ -9,8 +9,33 @@ export type DocumentType =
 export type DocumentStatus =
   | 'PENDING'
   | 'PROCESSING'
+  | 'PROCESSED'
   | 'COMPLETED'
   | 'FAILED';
+
+export type ExtractionMethod = 'text' | 'ocr';
+
+export interface DocumentPage {
+  id: string;
+  document_id: string;
+  page_number: number;
+  text: string;
+  extraction_method: ExtractionMethod;
+  character_count: number;
+  word_count: number;
+  ocr_used: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentUploadResponse {
+  document_id: string;
+  filename: string;
+  status: DocumentStatus;
+  page_count: number;
+  processed_page_count: number;
+  ocr_page_count: number;
+}
 
 export interface Document {
   id: string;

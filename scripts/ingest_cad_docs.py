@@ -1,94 +1,160 @@
 #!/usr/bin/env python3
 """
-Document & CAD Ingestion CLI Script
-Scans data/documents/ or a specified input path, parses engineering documents
-and CAD models, extracts metadata, and prepares data for search indexing.
+Document Ingestion CLI Script
+Ingests engineering PDF documents into PostgreSQL, extracts text page-by-page
+using PyMuPDF with OpenCV + Tesseract OCR fallback, and reports extraction statistics.
 """
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
 from pathlib import Path
 
+# Add backend directory to path to allow importing app modules
+ROOT_DIR = Path(__file__).resolve().parent.parent
+BACKEND_DIR = ROOT_DIR / "backend"
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
+
+# Ensure Windows Selector event loop policy for asyncpg
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+from app.core.database import AsyncSessionLocal
+from app.services.document_service import DocumentService
+from app.services.document_processing.pdf_extractor import PDFValidationError
+
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
 )
-logger = logging.getLogger("ingest-cad-docs")
+logger = logging.getLogger("ingest-docs")
 
 
-def scan_input_directory(target_path: Path):
-    """Scan the target path for engineering documents and CAD files."""
-    supported_extensions = {
-        ".pdf": "PDF Document",
-        ".docx": "Word Document",
-        ".txt": "Text Spec",
-        ".md": "Markdown Spec",
-        ".xlsx": "BOM Spreadsheet",
-        ".step": "3D CAD (STEP)",
-        ".stp": "3D CAD (STEP)",
-        ".iges": "3D CAD (IGES)",
-        ".igs": "3D CAD (IGES)",
-        ".dxf": "2D CAD (DXF)",
-        ".dwg": "2D CAD (DWG)",
-        ".stl": "3D Mesh (STL)",
-    }
+async def ingest_single_pdf(file_path: Path, document_type: str = "SPECIFICATION", part_number: str = None, revision: str = "A"):
+    """Ingest and process a single PDF file."""
+    if not file_path.is_file():
+        logger.error(f"File not found: {file_path}")
+        return False
 
-    found_files = []
-    if not target_path.exists():
-        logger.error(f"Path does not exist: {target_path}")
-        return found_files
+    if not file_path.suffix.lower() == ".pdf":
+        logger.error(f"Unsupported file format ({file_path.suffix}). Only PDF files are supported.")
+        return False
 
-    for file_path in target_path.rglob("*"):
-        if file_path.is_file() and file_path.suffix.lower() in supported_extensions:
-            found_files.append((file_path, supported_extensions[file_path.suffix.lower()]))
+    logger.info(f"Ingesting PDF: {file_path.name} ({file_path.stat().st_size} bytes)")
 
-    return found_files
+    with open(file_path, "rb") as f:
+        file_bytes = f.read()
+
+    async with AsyncSessionLocal() as session:
+        try:
+            doc, result = await DocumentService.process_and_store_document(
+                db=session,
+                file_bytes=file_bytes,
+                original_filename=file_path.name,
+                document_type=document_type,
+                part_number=part_number,
+                revision=revision,
+            )
+
+            print("\n" + "=" * 60)
+            print("  DOCUMENT INGESTION REPORT")
+            print("=" * 60)
+            print(f"  Document ID      : {doc.id}")
+            print(f"  Filename         : {doc.filename}")
+            print(f"  Document Type    : {doc.document_type}")
+            print(f"  Part Number      : {doc.part_number or 'N/A'}")
+            print(f"  Revision         : {doc.revision}")
+            print(f"  Total Pages      : {result.total_pages}")
+            print(f"  Processed Pages  : {result.processed_pages}")
+            print(f"  Native Text Pages: {result.total_pages - result.ocr_pages}")
+            print(f"  OCR Pages        : {result.ocr_pages}")
+            print(f"  Final Status     : {doc.status}")
+            print("=" * 60 + "\n")
+            return True
+
+        except PDFValidationError as e:
+            logger.error(f"Validation failure for {file_path.name}: {e}")
+            return False
+        except Exception as e:
+            logger.error(f"Failed to process {file_path.name}: {e}")
+            return False
 
 
-def process_file(file_path: Path, file_type: str, dry_run: bool = False):
-    """
-    Placeholder parsing step for engineering documents and CAD models.
-    (Future integration will use CAD kernel APIs and document intelligence extractors)
-    """
-    logger.info(f"Processing: {file_path.name} [{file_type}]")
-    if dry_run:
-        logger.info(f"Dry run: Skipping parsing and indexing for {file_path.name}")
+async def ingest_directory(dir_path: Path, document_type: str = "SPECIFICATION"):
+    """Scan directory and ingest all candidate PDF documents."""
+    pdf_files = list(dir_path.glob("*.pdf")) + list(dir_path.glob("*.PDF"))
+    if not pdf_files:
+        logger.warning(f"No PDF documents found in: {dir_path}")
         return
 
-    # In production, this will trigger CAD parsing, text extraction, chunking, and embedding
-    logger.info(f"Successfully staged {file_path.name} for downstream extraction.")
+    logger.info(f"Found {len(pdf_files)} PDF documents to ingest.")
+    success_count = 0
+    for pdf_file in pdf_files:
+        if await ingest_single_pdf(pdf_file, document_type=document_type):
+            success_count += 1
+
+    logger.info(f"Ingestion batch completed: {success_count}/{len(pdf_files)} succeeded.")
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Engineering Document Intelligence & CAD Ingestion CLI"
+        description="Engineering Document Intelligence Ingestion CLI"
+    )
+    parser.add_argument(
+        "file",
+        nargs="?",
+        default=None,
+        type=str,
+        help="Path to a single engineering PDF to ingest."
     )
     parser.add_argument(
         "--source-dir",
         type=str,
-        default="data/documents",
-        help="Directory containing engineering documents and CAD models to ingest."
+        default=None,
+        help="Directory containing engineering PDFs to ingest (e.g. data/documents)."
     )
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Scan and list files without parsing or storing."
+        "--document-type",
+        type=str,
+        default="SPECIFICATION",
+        help="Document type (SPECIFICATION, MANUAL, DATASHEET, DRAWING, BOM)."
     )
+    parser.add_argument(
+        "--part-number",
+        type=str,
+        default=None,
+        help="Optional engineering part or assembly number."
+    )
+    parser.add_argument(
+        "--revision",
+        type=str,
+        default="A",
+        help="Engineering revision identifier (default: A)."
+    )
+
     args = parser.parse_args()
 
-    source_path = Path(args.source_dir).resolve()
-    logger.info(f"Starting ingestion scan on: {source_path}")
-
-    files = scan_input_directory(source_path)
-    logger.info(f"Found {len(files)} candidate engineering files.")
-
-    for file_path, file_type in files:
-        process_file(file_path, file_type, dry_run=args.dry_run)
-
-    logger.info("Ingestion scan complete.")
+    if args.file:
+        file_path = Path(args.file).resolve()
+        asyncio.run(ingest_single_pdf(
+            file_path,
+            document_type=args.document_type,
+            part_number=args.part_number,
+            revision=args.revision
+        ))
+    elif args.source_dir:
+        dir_path = Path(args.source_dir).resolve()
+        asyncio.run(ingest_directory(dir_path, document_type=args.document_type))
+    else:
+        # Default scan data/documents/
+        default_dir = ROOT_DIR / "data" / "documents"
+        logger.info(f"No specific file provided. Scanning default directory: {default_dir}")
+        asyncio.run(ingest_directory(default_dir, document_type=args.document_type))
 
 
 if __name__ == "__main__":

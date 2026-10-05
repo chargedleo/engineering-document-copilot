@@ -113,38 +113,36 @@ flowchart TB
 
 ---
 
-## 4. End-to-End Ingestion & Query Lifecycle
+## 4. Document Intelligence & OCR Pipeline (Milestone 3 Implemented)
 
 ```mermaid
-sequenceDiagram
-    autonumber
-    actor Engineer as Engineering User
-    participant Frontend as React Frontend
-    participant API as FastAPI Backend
-    participant DB as PostgreSQL
-    participant Search as Azure AI Search
-    participant Agent as LangGraph Copilot
+flowchart TD
+    Upload["Engineering PDF Upload\n(POST /api/v1/documents/upload)"] --> Validation["PDF Validation\n(%PDF- Header, Size <= 50MB, Pages <= 500)"]
+    Validation --> LocalStore["Local File Storage\n(data/documents/{document_id}/{filename})"]
+    LocalStore --> PyMuPDF["PyMuPDF (fitz)\nPage-by-Page Extraction"]
+    PyMuPDF --> Heuristic{"Native Text\nSufficient?\n(>= 50 chars)"}
 
-    Note over Engineer,API: 1. Ingestion Phase
-    Engineer->>Frontend: Upload Engineering Doc / CAD File
-    Frontend->>API: POST /api/v1/documents/upload
-    API->>DB: Record Document Entry (Status: PENDING)
-    API-->>Frontend: 202 Accepted (doc_id)
+    Heuristic -- Yes --> NativePath["Native Text Normalized\n(Preserves Units, Tolerances, Numbers)\nextraction_method: text\nocr_used: false"]
+    Heuristic -- No (Scanned / Diagram) --> Render["Render Page Image\n(300 DPI via fitz Matrix)"]
 
-    Note over API,Search: Background Processing (scripts/ingest_cad_docs.py)
-    API->>DB: Update Status: COMPLETED
+    Render --> CV2["OpenCV Preprocessing\n(Grayscale + Gaussian Denoise + Otsu Threshold)"]
+    CV2 --> OCR["Tesseract OCR Engine\nextraction_method: ocr\nocr_used: true"]
 
-    Note over Engineer,Agent: 2. Query & Copilot Reasoning Phase
-    Engineer->>Frontend: Ask: "What are the tolerance limits for Part #402?"
-    Frontend->>API: POST /api/v1/chat/query
-    API->>Agent: Run Copilot Graph (State + History)
-    Agent->>Search: Hybrid Vector + Keyword Query
-    Search-->>Agent: Matched Document Chunks & CAD Nodes
-    Agent->>Agent: Synthesize Technical Answer with Citations
-    Agent-->>API: Copilot Response + Citations + CAD References
-    API->>DB: Save Message & Citation Logs
-    API-->>Frontend: 200 OK (Answer & References)
-    Frontend-->>Engineer: Render Response with interactive citations
+    NativePath --> SavePage["Persist DocumentPage Record\n(1-indexed page_number, character_count, word_count)"]
+    OCR --> SavePage
+
+    SavePage --> PostgresPages[("PostgreSQL 16\n(document_pages table)")]
+    PostgresPages --> FinalStatus["Update Document Status\n(PENDING -> PROCESSING -> PROCESSED)"]
+
+    subgraph FuturePhases["Future Milestones (Strictly Decoupled)"]
+        Chunking["Document Chunking (Milestone 4)"]
+        Embeddings["Vector Embeddings (Milestone 4)"]
+        Search["Azure AI Search Index (Milestone 4)"]
+        RAG["RAG Hybrid Retrieval (Milestone 5)"]
+        LangGraph["LangGraph Reasoning Agent (Milestone 5)"]
+    end
+
+    FinalStatus -.-> FuturePhases
 ```
 
 ---
@@ -152,9 +150,10 @@ sequenceDiagram
 ## 5. Security & Production Principles
 
 1. **Strict Secret Isolation**: No API keys or credentials committed to source code; managed via `.env` and secret stores.
-2. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
-3. **Structured Logging**: JSON-formatted logs with request correlation IDs for end-to-end traceability.
-4. **Data Isolation**: Raw uploads and processed outputs are stored with deterministic hashing to avoid duplicate indexing and filename collisions.
+2. **Path Traversal Protection**: Uploaded filenames are sanitized with basename isolation to prevent directory traversal attacks (`../../`).
+3. **Information Disclosure Prevention**: Global exception handlers redact absolute filesystem paths, database connection strings, and stack traces from API responses.
+4. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
+5. **Structured Logging**: Contextual logs with document ID and page numbers for pipeline observability without logging full extracted document texts.
 
 ---
 
@@ -163,9 +162,9 @@ sequenceDiagram
 | Milestone | Scope & Capabilities | Status |
 | :--- | :--- | :--- |
 | **Milestone 1** | Repository structure, project scaffolding, base types, Docker templates. | Completed |
-| **Milestone 2** (Current) | **Backend Foundation**: Asynchronous FastAPI, layered Service architecture, async SQLAlchemy 2.0 with PostgreSQL, bidirectional Alembic migrations, foundational Document metadata API (`GET`, `POST`), structured error handlers, and hermetic automated pytest suite. Azure OpenAI & AI Search configurations are decoupled and optional. | Completed |
-| **Milestone 3** | **Document Processing Pipeline**: Ingestion of engineering PDFs, text extraction, page-level chunking, and embedding generation. | Planned |
-| **Milestone 4** | **Hybrid Vector Search & RAG**: Azure AI Search indexing, vector similarity, and keyword filtering. | Planned |
-| **Milestone 5** | **LangGraph Copilot Agent**: Multi-turn dialogue, citation generation, and verification loop. | Planned |
+| **Milestone 2** | **Backend Foundation**: Asynchronous FastAPI, layered Service architecture, async SQLAlchemy 2.0 with PostgreSQL, bidirectional Alembic migrations, foundational Document metadata API (`GET`, `POST`), structured error handlers, and hermetic automated pytest suite. Azure OpenAI & AI Search configurations are decoupled and optional. | Completed |
+| **Milestone 3** (Current) | **Document Intelligence Pipeline**: Page-by-page PDF processing with PyMuPDF, scanned page detection heuristic, OpenCV image preprocessing, Tesseract OCR fallback, 1-based `DocumentPage` persistence in PostgreSQL, file upload endpoint (`POST /upload`), page retrieval APIs (`GET /pages`, `GET /pages/{num}`), CLI ingestion tool (`ingest_cad_docs.py`), and 24 passing automated tests. | Completed |
+| **Milestone 4** | **Document Chunking & Vector Search**: Contextual chunking preserving technical tables and sections, embedding generation, and Azure AI Search hybrid index. | Planned |
+| **Milestone 5** | **LangGraph Copilot Agent**: Multi-turn dialogue, citation generation with page-level verification loop, and technical synthesis. | Planned |
 | **Milestone 6** | **CAD Extension**: STEP/DXF metadata extraction, BOM cross-referencing, and visual integration. | Planned |
 

@@ -2,7 +2,19 @@ import enum
 import uuid
 from datetime import datetime, timezone
 from typing import Optional, List, Any, Dict
-from sqlalchemy import String, BigInteger, Enum, ForeignKey, JSON, Float, DateTime
+from sqlalchemy import (
+    String,
+    BigInteger,
+    Enum,
+    ForeignKey,
+    JSON,
+    Float,
+    DateTime,
+    Integer,
+    Boolean,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
@@ -20,8 +32,14 @@ class DocumentType(str, enum.Enum):
 class DocumentStatus(str, enum.Enum):
     PENDING = "PENDING"
     PROCESSING = "PROCESSING"
+    PROCESSED = "PROCESSED"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
+
+class ExtractionMethod(str, enum.Enum):
+    TEXT = "text"
+    OCR = "ocr"
 
 
 class Document(Base, TimestampMixin):
@@ -48,12 +66,53 @@ class Document(Base, TimestampMixin):
         nullable=False
     )
 
+    # Document pages relationship (Milestone 3)
+    pages: Mapped[List["DocumentPage"]] = relationship(
+        "DocumentPage",
+        back_populates="document",
+        cascade="all, delete-orphan",
+        order_by="DocumentPage.page_number",
+        lazy="selectin"
+    )
+
     # CAD metadata relationship (future extension, simplified for Milestone 2)
     cad_metadata: Mapped[List["CadMetadata"]] = relationship(
         "CadMetadata",
         back_populates="document",
         cascade="all, delete-orphan",
         lazy="selectin"
+    )
+
+
+class DocumentPage(Base, TimestampMixin):
+    """
+    Page-level extracted text and OCR metadata for an engineering document.
+    """
+    __tablename__ = "document_pages"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    document_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    page_number: Mapped[int] = mapped_column(Integer, nullable=False, index=True)
+    text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    extraction_method: Mapped[ExtractionMethod] = mapped_column(
+        Enum(ExtractionMethod, name="extractionmethod", values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=ExtractionMethod.TEXT
+    )
+    character_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    word_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    ocr_used: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+    # Relationship back to document
+    document: Mapped["Document"] = relationship("Document", back_populates="pages")
+
+    __table_args__ = (
+        UniqueConstraint("document_id", "page_number", name="uq_document_pages_document_page"),
     )
 
 

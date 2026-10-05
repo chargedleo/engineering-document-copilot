@@ -77,12 +77,14 @@ Desktop.ini
 *.sqlite3
 
 # Project-specific data directories (preserve directory structures via .gitkeep)
+data/*.pdf
 data/documents/*
 !data/documents/.gitkeep
 !data/documents/README.md
 data/processed/*
 !data/processed/.gitkeep
 !data/processed/README.md
+backend/data/
 
 # OS and Temporary files
 tmp/

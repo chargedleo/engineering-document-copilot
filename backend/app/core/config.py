@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import List, Optional, Union
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -57,9 +58,20 @@ class Settings(BaseSettings):
     AZURE_SEARCH_DOCUMENTS_INDEX_NAME: Optional[str] = "engineering-docs-index"
     AZURE_SEARCH_CAD_INDEX_NAME: Optional[str] = "cad-knowledge-index"
 
-    # Storage Paths
-    DOCUMENTS_STORAGE_DIR: str = "./data/documents"
-    PROCESSED_STORAGE_DIR: str = "./data/processed"
+    # Storage Paths (Resolved relative to project root)
+    DOCUMENTS_STORAGE_DIR: str = str(
+        Path(__file__).resolve().parent.parent.parent.parent / "data" / "documents"
+    )
+    PROCESSED_STORAGE_DIR: str = str(
+        Path(__file__).resolve().parent.parent.parent.parent / "data" / "processed"
+    )
+
+    # Document Intelligence & OCR Configuration (Milestone 3)
+    TESSERACT_CMD: Optional[str] = None
+    MAX_UPLOAD_SIZE_MB: int = 50
+    MAX_PDF_PAGES: int = 500
+    PDF_MIN_NATIVE_TEXT_CHARS: int = 50
+    OCR_DPI: int = 300
 
 
 settings = Settings()

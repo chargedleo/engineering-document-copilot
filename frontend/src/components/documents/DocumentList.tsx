@@ -24,8 +24,9 @@ export const DocumentList: React.FC = () => {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
+      case 'PROCESSED':
       case 'COMPLETED':
-        return <Badge variant="success">Completed</Badge>;
+        return <Badge variant="success">Processed</Badge>;
       case 'PROCESSING':
         return <Badge variant="warning">Processing</Badge>;
       case 'FAILED':
@@ -87,6 +88,7 @@ export const DocumentList: React.FC = () => {
                 <th>Type</th>
                 <th>Part Number</th>
                 <th>Revision</th>
+                <th>Pages</th>
                 <th>Size</th>
                 <th>Status</th>
                 <th>Date Added</th>
@@ -99,6 +101,11 @@ export const DocumentList: React.FC = () => {
                   <td><Badge variant="info">{doc.document_type || 'SPECIFICATION'}</Badge></td>
                   <td>{doc.part_number || '-'}</td>
                   <td>{doc.revision || '-'}</td>
+                  <td>
+                    {doc.metadata_payload?.page_count
+                      ? `${doc.metadata_payload.page_count} ${doc.metadata_payload.ocr_page_count ? `(${doc.metadata_payload.ocr_page_count} OCR)` : ''}`
+                      : '-'}
+                  </td>
                   <td>{formatFileSize(doc.file_size_bytes)}</td>
                   <td>{getStatusBadge(doc.status)}</td>
                   <td style={{ color: 'var(--text-muted)' }}>

@@ -110,3 +110,124 @@ async def test_create_document_validation_failure(async_client: AsyncClient):
     assert data["success"] is False
     assert "validation" in data["message"].lower()
     assert len(data["errors"]) > 0
+
+
+def generate_test_pdf_bytes() -> bytes:
+    """Generate in-memory multi-page test PDF bytes using fitz."""
+    import fitz
+    doc = fitz.open()
+    p1 = doc.new_page(width=595, height=842)
+    p1.insert_text(
+        (50, 72),
+        "TURBINE COMPRESSOR SPECIFICATION MODEL TC-500\n"
+        "Part Number: TC-500-ENG\n"
+        "Operating Pressure: 30.5 bar +/- 0.5 bar\n"
+        "Speed: 3600 RPM\n"
+        "Material: ASTM A182 F316\n",
+        fontsize=12
+    )
+    p2 = doc.new_page(width=595, height=842)
+    p2.insert_text(
+        (50, 72),
+        "MAINTENANCE INTERVALS AND LUBRICATION SPECIFICATIONS\n"
+        "Synthetic Lubricant: ISO VG 68\n"
+        "Bearing replacement: 8000 operating hours\n",
+        fontsize=12
+    )
+    b = doc.tobytes()
+    doc.close()
+    return b
+
+
+@pytest.mark.asyncio
+async def test_upload_document_pdf_success(async_client: AsyncClient):
+    """Test: Upload valid PDF returns 201 Created and creates DocumentPage records."""
+    pdf_bytes = generate_test_pdf_bytes()
+    files = {"file": ("Turbine_Compressor_Spec.pdf", pdf_bytes, "application/pdf")}
+    data = {
+        "document_type": "SPECIFICATION",
+        "part_number": "TC-500-ENG",
+        "revision": "B"
+    }
+    response = await async_client.post("/api/v1/documents/upload", files=files, data=data)
+    assert response.status_code == 201
+    body = response.json()
+    assert body["success"] is True
+    res_data = body["data"]
+    doc_id = res_data["document_id"]
+    assert doc_id is not None
+    assert res_data["filename"] == "Turbine_Compressor_Spec.pdf"
+    assert res_data["status"] == "PROCESSED"
+    assert res_data["page_count"] == 2
+    assert res_data["processed_page_count"] == 2
+    assert res_data["ocr_page_count"] == 0
+
+    # Verify pages can be listed
+    pages_res = await async_client.get(f"/api/v1/documents/{doc_id}/pages")
+    assert pages_res.status_code == 200
+    pages_data = pages_res.json()["data"]
+    assert pages_data["total"] == 2
+    assert len(pages_data["items"]) == 2
+
+    # Verify 1-based page numbering
+    page1 = pages_data["items"][0]
+    page2 = pages_data["items"][1]
+    assert page1["page_number"] == 1
+    assert page1["extraction_method"] == "text"
+    assert page1["ocr_used"] is False
+    assert "TURBINE COMPRESSOR SPECIFICATION" in page1["text"]
+    assert page1["character_count"] > 0
+    assert page1["word_count"] > 0
+
+    assert page2["page_number"] == 2
+    assert page2["extraction_method"] == "text"
+    assert "MAINTENANCE INTERVALS" in page2["text"]
+
+
+@pytest.mark.asyncio
+async def test_get_document_single_page(async_client: AsyncClient):
+    """Test: Retrieve single document page by 1-based page number."""
+    pdf_bytes = generate_test_pdf_bytes()
+    files = {"file": ("Compressor_Spec_Single.pdf", pdf_bytes, "application/pdf")}
+    upload_res = await async_client.post("/api/v1/documents/upload", files=files)
+    doc_id = upload_res.json()["data"]["document_id"]
+
+    # Retrieve Page 1
+    page1_res = await async_client.get(f"/api/v1/documents/{doc_id}/pages/1")
+    assert page1_res.status_code == 200
+    page1 = page1_res.json()["data"]
+    assert page1["document_id"] == doc_id
+    assert page1["page_number"] == 1
+    assert "TURBINE COMPRESSOR" in page1["text"]
+
+    # Non-existent page number 99
+    page99_res = await async_client.get(f"/api/v1/documents/{doc_id}/pages/99")
+    assert page99_res.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_upload_invalid_file_extension(async_client: AsyncClient):
+    """Test: Upload non-PDF file returns 400 Bad Request."""
+    files = {"file": ("drawing.dwg", b"fake binary data", "application/octet-stream")}
+    response = await async_client.post("/api/v1/documents/upload", files=files)
+    assert response.status_code == 400
+    assert "Only PDF documents" in response.json()["message"]
+
+
+@pytest.mark.asyncio
+async def test_upload_empty_pdf_file(async_client: AsyncClient):
+    """Test: Upload 0-byte PDF returns 400 Bad Request."""
+    files = {"file": ("empty.pdf", b"", "application/pdf")}
+    response = await async_client.post("/api/v1/documents/upload", files=files)
+    assert response.status_code == 400
+    assert "empty" in response.json()["message"].lower()
+
+
+@pytest.mark.asyncio
+async def test_upload_invalid_pdf_header(async_client: AsyncClient):
+    """Test: Upload file without valid PDF header returns 400 Bad Request."""
+    files = {"file": ("fake.pdf", b"NOT A PDF HEADER CONTENT", "application/pdf")}
+    response = await async_client.post("/api/v1/documents/upload", files=files)
+    assert response.status_code == 400
+    assert "Header does not match" in response.json()["message"]
+

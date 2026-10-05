@@ -51,4 +51,12 @@ export const documentService = {
   async getCadMetadataByDocument(documentId: string): Promise<CadMetadata[]> {
     return request<CadMetadata[]>(`/cad/by-document/${documentId}`);
   },
+
+  async getDocumentPages(documentId: string, page = 1, pageSize = 50): Promise<PaginatedResponse<DocumentPage>> {
+    return request<PaginatedResponse<DocumentPage>>(`/documents/${documentId}/pages?page=${page}&page_size=${pageSize}`);
+  },
+
+  async getDocumentPage(documentId: string, pageNumber: number): Promise<DocumentPage> {
+    return request<DocumentPage>(`/documents/${documentId}/pages/${pageNumber}`);
+  },
 };
