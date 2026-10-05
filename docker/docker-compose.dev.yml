@@ -1,0 +1,18 @@
+services:
+  backend:
+    volumes:
+      - ../backend:/app
+      - ../data/documents:/app/data/documents
+      - ../data/processed:/app/data/processed
+    command: uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+    environment:
+      APP_ENV: development
+      DEBUG: "True"
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ../frontend/src:/app/src
+      - ../frontend/public:/app/public
