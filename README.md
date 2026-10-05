@@ -2,30 +2,35 @@
 
 A production-grade intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
 
-> **Project Status (Milestone 4 - Document Chunking & Hybrid Vector Indexing)**:
-> Fully operational structural document chunking, dense vector embeddings, and hybrid retrieval engine. Features context-preserving chunking tailored for engineering texts (protects units, tolerances, part numbers, and numbered sections), a dual embedding architecture (deterministic 1536-dimensional offline mock and Azure OpenAI `text-embedding-3-large`), and a hybrid search engine combining **BM25 lexical retrieval** and **vector cosine similarity** via **Reciprocal Rank Fusion (RRF)** with metadata filtering. Chunks and embeddings are stored in PostgreSQL (`document_chunks` table) and indexed into hybrid search.
+> **Project Status (Milestone 5 - Grounded Retrieval-Augmented Generation / RAG)**:
+> Fully operational grounded question-answering pipeline connecting hybrid retrieval to LLM synthesis with document, page, and chunk-level citations. Features a dual LLM provider layer (deterministic offline mock and Azure OpenAI `gpt-4o`), structural context assembly with passive XML data isolation to neutralize prompt injection attacks, strict engineering unit/tolerance/part-number fidelity, explicit evidence sufficiency checks with standardized abstention, a dedicated REST API (`POST /api/v1/rag/query`), interactive CLI (`scripts/query_rag.py`), and 56 passing automated tests.
 
 ---
 
 ## 🏗️ Architecture & Tech Stack
 
 - **Backend**: Python 3.11+, [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/) (Async 2.x), [asyncpg](https://magicstack.github.io/asyncpg/), [Alembic](https://alembic.sqlalchemy.org/)
-- **Document Intelligence & OCR**:
-  - **PyMuPDF (`fitz`)**: Primary high-performance PDF validation, structure analysis, and native text extraction.
-  - **OpenCV (`cv2`)**: Image preprocessing for scanned pages (grayscale conversion, Gaussian noise filtering, Otsu binarization).
+- **Document Intelligence & OCR (Milestone 3)**:
+  - **PyMuPDF (`fitz`)**: High-performance PDF validation, structure analysis, and native text extraction.
+  - **OpenCV (`cv2`)**: Image preprocessing for scanned pages (grayscale, Gaussian denoise, Otsu thresholding).
   - **Tesseract OCR (`pytesseract`)**: Optical Character Recognition engine for scanned pages and drawing title blocks.
   - **Pillow (`PIL`)**: High-resolution page rendering and image handling.
 - **Chunking & Hybrid Search Engine (Milestone 4)**:
   - **Engineering Text Chunker**: Structural chunking preserving engineering units, tolerances, part numbers, and page provenance.
   - **Embedding Providers**: Abstract provider pattern with deterministic offline `LocalMockEmbeddingProvider` (unit-normalized 1536-dim vectors) and production `AzureOpenAIEmbeddingProvider`.
   - **Search Indices**: Abstract `BaseSearchIndex` with in-process `LocalSearchIndex` (BM25 + Cosine Vector + RRF) and `AzureSearchIndex` for Azure AI Search.
+- **Grounded Retrieval-Augmented Generation (Milestone 5)**:
+  - **LLM Providers**: Abstract `BaseLLMProvider` pattern with deterministic offline `LocalMockChatProvider` (grounded synthesis, unit preservation, citation tag generation) and production `AzureOpenAIChatProvider` (Azure OpenAI REST API).
+  - **Context Assembly**: `ContextBuilder` structuring candidate hits above relevance threshold into `<engineering_context>` evidence blocks with `[C1]`, `[C2]` citation tracking.
+  - **Untrusted Context Boundary**: Strict passive data isolation preventing prompt injections embedded in PDF files from hijacking LLM instructions.
+  - **Standardized Abstention**: Explicit sufficiency check returning `"The available documents do not contain enough information to answer this question."` when evidence is missing.
 - **Database**: PostgreSQL 16 (Local Windows setup at `C:\Users\admin\pgsql`; Docker Compose optional)
 - **Frontend**: [React 18](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), [Vite](https://vitejs.dev/)
 - **Configuration & Validation**: [Pydantic v2](https://docs.pydantic.dev/) and `pydantic-settings`
-- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (41 hermetic automated tests)
+- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (56 hermetic automated tests)
 - **Future Integrations (Configuration-Ready)**:
-  - Orchestration: [LangGraph](https://python.langchain.com/docs/langgraph) / LangChain (Milestone 5)
-  - LLM: Azure OpenAI (`gpt-4o`) (Milestone 5)
+  - Orchestration: [LangGraph](https://python.langchain.com/docs/langgraph) Multi-Agent Workflows (Milestone 6)
+  - CAD Geometry: STEP / DXF geometry parsing and 3D visual navigation (Milestone 7)
 
 For an in-depth architectural breakdown and sequence diagrams, refer to [`architecture.md`](./architecture.md).
 
@@ -46,20 +51,23 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   │   │   └── 20261005_e77ce6df94e3_add_document_chunks.py
 │   │   └── env.py             # Async Alembic runner
 │   ├── app/
-│   │   ├── api/v1/            # Versioned API routes (health, documents, search, cad, chat)
+│   │   ├── api/v1/            # Versioned API routes (health, documents, search, rag, cad, chat)
 │   │   ├── core/              # Config (Pydantic Settings), DB session, logging
 │   │   ├── models/            # SQLAlchemy ORM models (Document, DocumentPage, DocumentChunk)
-│   │   ├── schemas/           # Pydantic v2 schemas (document, chunk, common)
+│   │   ├── schemas/           # Pydantic v2 schemas (document, chunk, rag, common)
 │   │   ├── services/          # Business logic layer
 │   │   │   ├── document_service.py
 │   │   │   ├── search_service.py   # Hybrid retrieval & query orchestration
+│   │   │   ├── rag_service.py      # Grounded RAG synthesis & citation engine
 │   │   │   ├── chunking/           # Structural engineering chunker
 │   │   │   ├── embeddings/         # Embedding providers (LocalMock, Azure OpenAI)
 │   │   │   ├── search/             # Hybrid search indices (LocalIndex, AzureSearchIndex)
+│   │   │   ├── llm/                # LLM providers (LocalMock, Azure OpenAI REST)
+│   │   │   ├── rag/                # Context builder & prompt engineering
 │   │   │   └── document_processing/# PyMuPDF text extractor & OCR pipeline
 │   │   ├── agents/            # LangGraph agent stubs (for future milestone)
 │   │   └── integrations/      # Azure connectors (optional)
-│   ├── tests/                 # Hermetic automated test suite (41 pytest tests)
+│   ├── tests/                 # Hermetic automated test suite (56 pytest tests)
 │   ├── Dockerfile             # Container definition for backend
 │   ├── pyproject.toml         # Python packaging and pytest configuration
 │   └── requirements.txt       # Production & development dependencies
@@ -71,7 +79,8 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   ├── init_db.py             # Database migration executor (alembic upgrade head)
 │   ├── seed_data.py           # Sample engineering document seeder
 │   ├── ingest_cad_docs.py     # Ingestion & chunking CLI with progress reporting
-│   └── search_docs.py         # Keyword, vector, and hybrid search CLI
+│   ├── search_docs.py         # Keyword, vector, and hybrid search CLI
+│   └── query_rag.py           # Grounded RAG question-answering CLI with citations
 └── docker/                    # Docker Compose orchestration
 ```
 
@@ -329,6 +338,116 @@ Example Search Output:
 ======================================================================
 ```
 
+### Grounded Engineering Q&A via RAG CLI (Milestone 5)
+Ask technical questions with citation provenance and automatic evidence validation:
+
+```powershell
+python scripts/query_rag.py "What is the maximum working pressure of CFP-402-316L?"
+```
+
+Supported options:
+- `--mode`: Retrieval mode (`hybrid` default, `keyword`, `vector`).
+- `--top-k`: Maximum candidate chunks to retrieve and evaluate (default: 5).
+- `--part-number`: Filter by engineering part number (e.g. `CFP-402-316L`).
+- `--revision`: Filter by document revision (e.g. `D`).
+- `--document-type`: Filter by document type (e.g. `SPECIFICATION`).
+
+#### Example 1: Working Pressure Query
+```powershell
+python scripts/query_rag.py "What is the maximum working pressure of CFP-402-316L?"
+```
+Output:
+```text
+===========================================================================
+  ENGINEERING COPILOT - GROUNDED RAG RESPONSE
+===========================================================================
+  QUESTION : What is the maximum working pressure of CFP-402-316L?
+  PROVIDER : local_mock (mock-engineering-llm-v1)
+  MODE     : HYBRID (Top-K: 5)
+  EVIDENCE : Sufficient
+  LATENCY  : 296.2 ms
+---------------------------------------------------------------------------
+
+  ANSWER:
+
+    The maximum working pressure for CFP-402-316L is 16.0 bar (232 psi) at 20 C [C1].
+
+---------------------------------------------------------------------------
+  CITATIONS (1 referenced):
+
+  [C1] sample_pump_spec.pdf (Page 1, Chunk #0 | Part: CFP-402-316L, Rev: D, Section: CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION)
+      Snippet:
+        CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION
+        Document ID: SPEC-PUMP-402-REV-D
+        Part Number: CFP-402-316L
+        ...
+===========================================================================
+```
+
+#### Example 2: Bearing Journal Tolerance Query
+```powershell
+python scripts/query_rag.py "What is the radial bearing journal tolerance?"
+```
+Output:
+```text
+  ANSWER:
+    The radial bearing journal tolerance is ISO h6 (-0.000 / -0.016 mm) [C1].
+
+  CITATIONS:
+  [C1] sample_pump_spec.pdf (Page 2, Chunk #2 | Section: CFP-402 MECHANICAL CLEARANCES & ASSEMBLY SPECIFICATIONS)
+```
+
+#### Example 3: Maintenance Oil Change Interval
+```powershell
+python scripts/query_rag.py "What is the recommended oil change interval?"
+```
+Output:
+```text
+  ANSWER:
+    The recommended oil change interval is Every 4000 operational hours or 6 months [C1].
+
+  CITATIONS:
+  [C1] sample_pump_spec.pdf (Page 2, Chunk #3 | Section: CFP-402 MECHANICAL CLEARANCES & ASSEMBLY SPECIFICATIONS)
+```
+
+#### Example 4: Hydrostatic Test Pressure
+```powershell
+python scripts/query_rag.py "What is the hydrostatic test pressure?"
+```
+Output:
+```text
+  ANSWER:
+    The hydrostatic test pressure is 24.0 BAR GAUGE (1.5X DESIGN PRESSURE) [C1].
+
+  CITATIONS:
+  [C1] sample_pump_spec.pdf (Page 3, Chunk #4 | Section: QUALITY CONTROL INSPECTION & HYDROSTATIC TEST SIGN-OFF)
+```
+
+#### Example 5: Out-of-Domain Abstention Query
+```powershell
+python scripts/query_rag.py "What is the titanium wing spar yield strength?"
+```
+Output:
+```text
+===========================================================================
+  ENGINEERING COPILOT - GROUNDED RAG RESPONSE
+===========================================================================
+  QUESTION : What is the titanium wing spar yield strength?
+  PROVIDER : local_mock (mock-engineering-llm-v1)
+  MODE     : HYBRID (Top-K: 5)
+  EVIDENCE : Insufficient / Abstention
+  LATENCY  : 348.4 ms
+---------------------------------------------------------------------------
+
+  ANSWER:
+
+    The available documents do not contain enough information to answer this question.
+
+---------------------------------------------------------------------------
+  CITATIONS: None (Abstained or no relevant evidence matched)
+===========================================================================
+```
+
 ---
 
 ## 📡 API Reference
@@ -427,6 +546,76 @@ Response:
         }
       }
     ]
+  }
+}
+```
+
+---
+
+### 3. Grounded Retrieval-Augmented Generation (RAG) (Milestone 5)
+
+#### Ask Technical Engineering Question
+`POST /api/v1/rag/query`
+```bash
+curl -X POST "http://127.0.0.1:8000/api/v1/rag/query" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "What is the maximum working pressure of CFP-402-316L?",
+    "top_k": 5,
+    "retrieval_mode": "hybrid",
+    "filters": {
+      "part_number": "CFP-402-316L",
+      "revision": "D"
+    }
+  }'
+```
+Response:
+```json
+{
+  "success": true,
+  "message": "RAG answer synthesized successfully.",
+  "data": {
+    "query": "What is the maximum working pressure of CFP-402-316L?",
+    "answer": "The maximum working pressure for CFP-402-316L is 16.0 bar (232 psi) at 20 C [C1].",
+    "citations": [
+      {
+        "citation_id": "C1",
+        "document_id": "51826aca-8497-47b5-939b-edc76c0a522e",
+        "filename": "sample_pump_spec.pdf",
+        "page_number": 1,
+        "chunk_id": "8d212ab3-982e-4e55-b62a-b9d50c8b78a5",
+        "chunk_index": 0,
+        "part_number": "CFP-402-316L",
+        "revision": "D",
+        "section": "CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION",
+        "snippet": "CENTRIFUGAL CHEMICAL FEED PUMP - TECHNICAL SPECIFICATION\nDocument ID: SPEC-PUMP-402-REV-D\nPart Number: CFP-402-316L\nRevision: D..."
+      }
+    ],
+    "retrieved_chunks_count": 5,
+    "retrieval_mode": "hybrid",
+    "sufficient_evidence": true,
+    "provider": "local_mock",
+    "model": "mock-engineering-llm-v1",
+    "timing_ms": 296.2
+  }
+}
+```
+
+#### Abstention Response (When Evidence is Missing)
+```json
+{
+  "success": true,
+  "message": "Insufficient evidence to answer query.",
+  "data": {
+    "query": "What is the titanium wing spar yield strength?",
+    "answer": "The available documents do not contain enough information to answer this question.",
+    "citations": [],
+    "retrieved_chunks_count": 0,
+    "retrieval_mode": "hybrid",
+    "sufficient_evidence": false,
+    "provider": "local_mock",
+    "model": "mock-engineering-llm-v1",
+    "timing_ms": 12.4
   }
 }
 ```

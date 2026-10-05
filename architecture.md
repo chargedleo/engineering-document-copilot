@@ -112,17 +112,29 @@ flowchart TB
     $$RRF(d) = \sum_{m \in \{\text{keyword}, \text{vector}\}} \frac{1}{60 + \text{rank}_m(d)}$$
   - Metadata filtering: Granular filtering by `document_id`, `document_type`, `part_number`, `revision`, and `page_number`.
 
-### 3.5 AI Orchestration (Planned Integration - Milestone 5)
-- **LangGraph**:
-  - State machine-based multi-agent orchestration.
-  - Routes complex queries across hybrid search, CAD metadata lookup, and synthesis agents.
-  - Enables human-in-the-loop validation for engineering change recommendations.
-- **Azure OpenAI**:
-  - Language Model: `gpt-4o` for deep technical synthesis and engineering reasoning.
+### 3.5 Grounded Retrieval-Augmented Generation (RAG) (Milestone 5 Implemented)
+- **Dual LLM Provider Layer**:
+  - Abstract interface `BaseLLMProvider` with factory pattern (`get_llm_provider`).
+  - `LocalMockChatProvider`: Offline deterministic mock provider delivering grounded synthesis, unit/tolerance preservation, citation linking (`[C1]`, `[C2]`), and standard abstention without cloud credentials.
+  - `AzureOpenAIChatProvider`: Production cloud integration using official REST endpoints (`AZURE_OPENAI_CHAT_DEPLOYMENT` / `gpt-4o`).
+  - Provider auto-detection: selects `azure_openai` if endpoint and credentials exist; falls back to `local_mock` seamlessly.
+- **Context Assembly & Prompt Isolation**:
+  - `ContextBuilder`: Assembles retrieved candidate chunks above relevance threshold (`RAG_RELEVANCE_THRESHOLD`) into structured evidence blocks wrapped in `<engineering_context>`.
+  - Untrusted Data Boundary: Document text is explicitly isolated as untrusted data to immunize synthesis against prompt injections embedded in PDFs.
+- **Strict Grounding & Citation Extraction**:
+  - In-text citation tags (`[C1]`, `[C2]`) mapped directly to `CitationItem` metadata (`document_id`, `filename`, `page_number`, `chunk_id`, `chunk_index`, `part_number`, `revision`, `section`, `snippet`).
+  - Explicit Abstention: When evidence is insufficient or missing, cleanly returns standard response (`"The available documents do not contain enough information to answer this question."`) with `sufficient_evidence=False` and empty citations.
+- **REST API & CLI**:
+  - `POST /api/v1/rag/query` exposing grounded engineering question-answering.
+  - `scripts/query_rag.py` providing interactive CLI querying with formatted citations.
+
+### 3.6 Autonomous Agent & CAD Extensions (Future Milestones)
+- **LangGraph Multi-Agent Workflows (Milestone 6)**: Multi-turn conversational workflows, tool execution, and human-in-the-loop review.
+- **CAD Geometry Engine (Milestone 7)**: STEP/DXF metadata extraction, BOM cross-referencing, and visual integration.
 
 ---
 
-## 4. Document Intelligence & Indexing Pipeline (Milestones 3 & 4 Implemented)
+## 4. Document Intelligence, Hybrid Search & Grounded RAG Pipeline (Milestones 3, 4 & 5 Implemented)
 
 ```mermaid
 flowchart TD
@@ -131,30 +143,39 @@ flowchart TD
     LocalStore --> PyMuPDF["PyMuPDF (fitz)\nPage-by-Page Extraction"]
     PyMuPDF --> Heuristic{"Native Text\nSufficient?\n(>= 50 chars)"}
 
-    Heuristic -- Yes --> NativePath["Native Text Normalized\n(Preserves Units, Tolerances, Numbers)\nextraction_method: text\nocr_used: false"]
-    Heuristic -- No (Scanned / Diagram) --> Render["Render Page Image\n(300 DPI via fitz Matrix)"]
+    Heuristic -- Yes --> NativePath["Native Text Normalized\nextraction_method: text\nocr_used: false"]
+    Heuristic -- No (Scanned) --> Render["Render Page Image\n(300 DPI via fitz Matrix)"]
 
-    Render --> CV2["OpenCV Preprocessing\n(Grayscale + Gaussian Denoise + Otsu Threshold)"]
+    Render --> CV2["OpenCV Preprocessing\n(Grayscale + Denoise + Otsu)"]
     CV2 --> OCR["Tesseract OCR Engine\nextraction_method: ocr\nocr_used: true"]
 
-    NativePath --> SavePage["Persist DocumentPage Record\n(1-indexed page_number, character_count, word_count)"]
+    NativePath --> SavePage["Persist DocumentPage Record\n(page_number, char_count, word_count)"]
     OCR --> SavePage
 
     SavePage --> PostgresPages[("PostgreSQL 16\n(document_pages table)")]
-    PostgresPages --> FinalStatus["Update Document Status\n(PENDING -> PROCESSING -> PROCESSED)"]
+    PostgresPages --> Chunking["Engineering Document Chunker\n(Preserves Headings, Units, Tolerances)"]
 
-    FinalStatus --> Chunking["Engineering Document Chunker\n(Preserves Headings, Units, Tolerances, Overlap)"]
     Chunking --> EmbeddingGen["Generate Dense Embeddings\n(1536-dim via LocalMock / Azure OpenAI)"]
     EmbeddingGen --> SaveChunks[("PostgreSQL 16\n(document_chunks table)")]
     SaveChunks --> IndexSearch["Hybrid Search Index\n(BM25 + Dense Vectors + RRF)"]
 
-    subgraph FuturePhases["Future Milestones (Strictly Decoupled)"]
-        RAG["RAG Hybrid Retrieval & Grounding (Milestone 5)"]
-        LangGraph["LangGraph Multi-Agent Orchestrator (Milestone 5)"]
-        CAD["CAD Geometry Engine (Milestone 6)"]
+    subgraph M5RAGPipeline["Milestone 5: Grounded RAG Pipeline"]
+        UserQ["User Technical Query\n(POST /api/v1/rag/query or query_rag.py)"] --> ValQ["Query Validation & Sanitization"]
+        ValQ --> HybridRet["Hybrid Retrieval\n(BM25 + Vector Cosine + RRF)"]
+        IndexSearch -.-> HybridRet
+        HybridRet --> FilterHits["Threshold Filtering\n(RAG_RELEVANCE_THRESHOLD >= 0.01)"]
+        FilterHits --> AssemCtx["Context Assembly\n(<engineering_context> + [C1] Tags)"]
+        AssemCtx --> LLMGen["LLM Provider Synthesis\n(LocalMock / Azure OpenAI GPT-4o)"]
+        LLMGen --> CitParse["Citation Extraction &\nSufficiency Verification"]
+        CitParse --> FinalAnswer["Grounded Response\n(Answer + Citations + Provenance)"]
     end
 
-    IndexSearch -.-> FuturePhases
+    subgraph FuturePhases["Future Milestones (Strictly Decoupled)"]
+        LangGraph["LangGraph Multi-Agent Orchestrator (Milestone 6)"]
+        CAD["CAD Geometry Engine (Milestone 7)"]
+    end
+
+    FinalAnswer -.-> FuturePhases
 ```
 
 ---
@@ -164,9 +185,10 @@ flowchart TD
 1. **Strict Secret Isolation**: No API keys or credentials committed to source code; managed via `.env` and secret stores.
 2. **Path Traversal Protection**: Uploaded filenames are sanitized with basename isolation to prevent directory traversal attacks (`../../`).
 3. **Information Disclosure Prevention**: Global exception handlers redact absolute filesystem paths, database connection strings, and stack traces from API responses.
-4. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
-5. **Structured Logging**: Contextual logs with document ID and page numbers for pipeline observability without logging full extracted document texts.
-6. **Graceful Degradation**: Dual provider architecture allows local development and automated testing with zero cloud credentials, automatically promoting to Azure OpenAI and Azure AI Search when credentials are provided.
+4. **Untrusted Context Isolation**: Retrieved document text is treated strictly as passive, untrusted data wrapped in XML boundaries to defend against prompt injections.
+5. **Async I/O**: Asynchronous database and HTTP calls to prevent blocking the event loop during heavy concurrent workloads.
+6. **Structured Logging**: Contextual logs with query tokens, hit counts, latency, and provenance without logging raw sensitive engineering documents.
+7. **Graceful Degradation**: Dual provider architecture allows local development and automated testing with zero cloud credentials, automatically promoting to Azure OpenAI and Azure AI Search when credentials are provided.
 
 ---
 
@@ -177,8 +199,9 @@ flowchart TD
 | **Milestone 1** | Repository structure, project scaffolding, base types, Docker templates. | Completed |
 | **Milestone 2** | **Backend Foundation**: Asynchronous FastAPI, layered Service architecture, async SQLAlchemy 2.0 with PostgreSQL, bidirectional Alembic migrations, foundational Document metadata API (`GET`, `POST`), structured error handlers, and hermetic automated pytest suite. Azure OpenAI & AI Search configurations are decoupled and optional. | Completed |
 | **Milestone 3** | **Document Intelligence Pipeline**: Page-by-page PDF processing with PyMuPDF, scanned page detection heuristic, OpenCV image preprocessing, Tesseract OCR fallback, 1-based `DocumentPage` persistence in PostgreSQL, file upload endpoint (`POST /upload`), page retrieval APIs (`GET /pages`, `GET /pages/{num}`), CLI ingestion tool (`ingest_cad_docs.py`), and 24 passing automated tests. | Completed |
-| **Milestone 4** (Current) | **Document Chunking & Hybrid Vector Search**: Structural/semantic engineering chunker preserving engineering notation, tolerances, units, and page provenance; 1536-dimensional vector embedding architecture with deterministic offline mock and Azure OpenAI client; hybrid BM25 + vector search engine with Reciprocal Rank Fusion (RRF); `DocumentChunk` schema and Alembic migrations; chunk generation and search API endpoints (`/chunks/generate`, `/chunks`, `/search`); CLI retrieval tool (`search_docs.py`); and 41 passing automated tests. | Completed |
-| **Milestone 5** | **LangGraph Copilot Agent**: Multi-turn dialogue, citation generation with page-level verification loop, and technical synthesis. | Planned |
-| **Milestone 6** | **CAD Extension**: STEP/DXF metadata extraction, BOM cross-referencing, and visual integration. | Planned |
+| **Milestone 4** | **Document Chunking & Hybrid Vector Search**: Structural/semantic engineering chunker preserving engineering notation, tolerances, units, and page provenance; 1536-dimensional vector embedding architecture with deterministic offline mock and Azure OpenAI client; hybrid BM25 + vector search engine with Reciprocal Rank Fusion (RRF); `DocumentChunk` schema and Alembic migrations; chunk generation and search API endpoints (`/chunks/generate`, `/chunks`, `/search`); CLI retrieval tool (`search_docs.py`); and 41 passing automated tests. | Completed |
+| **Milestone 5** (Current) | **Retrieval-Augmented Generation (RAG)**: Grounded question-answering system combining hybrid retrieval with LLM synthesis; dual LLM provider layer (`BaseLLMProvider`, `LocalMockChatProvider`, `AzureOpenAIChatProvider`); structured evidence context assembly with citation tagging (`[C1]`, `[C2]`); strict unit/tolerance/part-number fidelity; prompt injection defense with untrusted context isolation; explicit abstention protocol (`sufficient_evidence=False`); REST endpoint `POST /api/v1/rag/query`; CLI tool `scripts/query_rag.py`; and 56 passing automated tests. | Completed |
+| **Milestone 6** | **LangGraph Copilot Agent**: Multi-turn dialogue, tool execution, citation generation with page-level verification loop, and human-in-the-loop engineering reviews. | Planned |
+| **Milestone 7** | **CAD Extension**: STEP/DXF metadata extraction, BOM cross-referencing, and 3D visual integration. | Planned |
 
 

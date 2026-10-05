@@ -81,5 +81,11 @@ class Settings(BaseSettings):
     SEARCH_PROVIDER: str = "auto"     # "auto", "azure", "local"
     HYBRID_SEARCH_TOP_K: int = 5
 
+    # Retrieval-Augmented Generation (RAG) Configuration (Milestone 5)
+    LLM_PROVIDER: str = "auto"  # "auto", "azure", "local"
+    AZURE_OPENAI_CHAT_DEPLOYMENT: Optional[str] = "gpt-4o"
+    RAG_RELEVANCE_THRESHOLD: float = 0.01
+    RAG_DEFAULT_TOP_K: int = 5
+
 
 settings = Settings()
