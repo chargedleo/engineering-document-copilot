@@ -42,6 +42,8 @@ services:
       EMBEDDING_PROVIDER: "${EMBEDDING_PROVIDER:-auto}"
       SEARCH_PROVIDER: "${SEARCH_PROVIDER:-auto}"
       LLM_PROVIDER: "${LLM_PROVIDER:-auto}"
+      DOCUMENTS_STORAGE_DIR: "/app/data/documents"
+      PROCESSED_STORAGE_DIR: "/app/data/processed"
       AZURE_OPENAI_API_KEY: "${AZURE_OPENAI_API_KEY:-}"
       AZURE_OPENAI_ENDPOINT: "${AZURE_OPENAI_ENDPOINT:-}"
       AZURE_OPENAI_DEPLOYMENT: "${AZURE_OPENAI_DEPLOYMENT:-gpt-4o}"
@@ -92,3 +94,6 @@ networks:
 volumes:
   postgres_data:
     driver: local
+
+
+
