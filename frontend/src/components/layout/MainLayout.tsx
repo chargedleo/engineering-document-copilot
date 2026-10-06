@@ -21,7 +21,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           </div>
           <div className="footer-links">
             <a
-              href="file:///d:/Projects/Engineering%20copilot/README.md"
+              href="https://github.com/chargedleo/engineering-document-copilot#readme"
               className="footer-link"
               target="_blank"
               rel="noreferrer"
@@ -44,7 +44,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
               API Reference
             </a>
             <a
-              href="https://github.com"
+              href="https://github.com/chargedleo/engineering-document-copilot"
               className="footer-link"
               target="_blank"
               rel="noreferrer"

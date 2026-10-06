@@ -45,3 +45,22 @@ export async function request<T>(
 
   return data.data;
 }
+
+export function isBackendUnavailable(error: unknown): boolean {
+  if (!error) return false;
+  if (error instanceof ApiError && (error.status === 404 || error.status === 502 || error.status === 503 || error.status === 504)) {
+    return true;
+  }
+  const msg = (typeof error === 'string' ? error : (error as Error).message || String(error)).toLowerCase();
+  return (
+    msg.includes('failed to fetch') ||
+    msg.includes('network error') ||
+    msg.includes('fetch failed') ||
+    msg.includes('load failed') ||
+    msg.includes('status 404') ||
+    msg.includes('status 502') ||
+    msg.includes('status 503') ||
+    msg.includes('status 504') ||
+    msg.includes('connection refused')
+  );
+}

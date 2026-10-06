@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { useDocuments } from '../../hooks/useDocuments';
+import { isBackendUnavailable } from '../../services/api';
 
 export const DocumentList: React.FC = () => {
   const { documents, loading, error, uploadDocument, refresh } = useDocuments();
@@ -97,8 +98,26 @@ export const DocumentList: React.FC = () => {
 
       {error && (
         <div className="abstention-notice">
-          <span className="abstention-heading">Registry Notice</span>
-          <p className="abstention-body">{error}</p>
+          <span className="abstention-heading">
+            {isBackendUnavailable(error) ? 'Live Preview · Local Backend Required' : 'Registry Notice'}
+          </span>
+          <p className="abstention-body">
+            {isBackendUnavailable(error) ? (
+              <span>
+                The frontend is deployed on Azure. The engineering copilot backend is available for local/Docker execution.{' '}
+                <a
+                  href="https://github.com/chargedleo/engineering-document-copilot#readme"
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ textDecoration: 'underline', fontWeight: 600, color: 'inherit' }}
+                >
+                  Run locally →
+                </a>
+              </span>
+            ) : (
+              error
+            )}
+          </p>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useChat } from '../../hooks/useChat';
 import { AgentCitation, ToolExecutionTrace } from '../../types';
+import { isBackendUnavailable } from '../../services/api';
 
 export const ChatWindow: React.FC = () => {
   const { turns, loading, error, sendQuery } = useChat();
@@ -151,8 +152,26 @@ export const ChatWindow: React.FC = () => {
                 {/* 3. Error State */}
                 {turn.error && (
                   <div className="abstention-notice">
-                    <span className="abstention-heading">Execution Notice</span>
-                    <p className="abstention-body">{turn.error}</p>
+                    <span className="abstention-heading">
+                      {isBackendUnavailable(turn.error) ? 'Live Preview · Local Backend Required' : 'Execution Notice'}
+                    </span>
+                    <p className="abstention-body">
+                      {isBackendUnavailable(turn.error) ? (
+                        <span>
+                          The frontend is deployed on Azure. The engineering copilot backend is available for local/Docker execution.{' '}
+                          <a
+                            href="https://github.com/chargedleo/engineering-document-copilot#readme"
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{ textDecoration: 'underline', fontWeight: 600, color: 'inherit' }}
+                          >
+                            Run locally →
+                          </a>
+                        </span>
+                      ) : (
+                        turn.error
+                      )}
+                    </p>
                   </div>
                 )}
 
