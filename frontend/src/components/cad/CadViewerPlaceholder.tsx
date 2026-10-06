@@ -5,14 +5,14 @@ export const CadViewerPlaceholder: React.FC = () => {
     <div className="cad-view">
       <div className="registry-header">
         <div>
-          <h1 className="registry-title">CAD Attributes & Assemblies</h1>
+          <h1 className="registry-title">CAD Attributes & Assemblies (Planned)</h1>
           <p className="registry-subtitle">
-            Geometric parameters, tolerance classes, and bill-of-materials structures cross-referenced with documentation.
+            Target architectural specification for geometric parameters, tolerance classes, and bill-of-materials structures cross-referenced with documentation.
           </p>
         </div>
 
         <div>
-          <span className="brand-badge">STEP / IGES / DXF Ready</span>
+          <span className="brand-badge">Planned Architecture</span>
         </div>
       </div>
 
@@ -20,15 +20,19 @@ export const CadViewerPlaceholder: React.FC = () => {
         <div>
           <div className="technical-canvas">
             <div className="canvas-crosshair" />
-            <div style={{ textAlign: 'center', zIndex: 1, backgroundColor: 'var(--canvas-bg)', padding: '1rem 1.5rem', border: '1px solid var(--border-medium)' }}>
-              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-                CAD Viewport Engine
+            <div style={{ textAlign: 'center', zIndex: 1, backgroundColor: 'var(--canvas-bg)', padding: '1.5rem', border: '1px solid var(--border-medium)', maxWidth: '440px' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                Planned Feature · 3D Viewport Engine
               </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 700, letterSpacing: '-0.02em', marginTop: '0.25rem' }}>
                 Geometric Canvas Standby
               </div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: '0.35rem', fontFamily: 'var(--font-mono)' }}>
-                Formats: STEP (.step, .stp) · IGES (.iges) · DXF · STL
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: '0.5rem', lineHeight: 1.5 }}>
+                CAD geometry parsing, STEP/DXF topological analysis, and WebGL rendering are planned extensions.
+                The current copilot production pipeline focuses on engineering document intelligence, page-aware OCR, hybrid retrieval, and grounded calculations.
+              </p>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.75rem', fontFamily: 'var(--font-mono)' }}>
+                Target Formats: STEP (.step, .stp) · IGES (.iges) · DXF · STL
               </div>
             </div>
             <div style={{ position: 'absolute', bottom: '1rem', right: '1.25rem', fontSize: '0.7rem', color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
@@ -39,20 +43,23 @@ export const CadViewerPlaceholder: React.FC = () => {
 
         <aside className="cad-sidebar">
           <div>
-            <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
-              Sample Assembly Registry
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                Assembly Schema
+              </div>
+              <span className="brand-badge" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>Demo Reference</span>
             </div>
             <div style={{ fontSize: '1.25rem', fontWeight: 700, letterSpacing: '-0.02em', marginTop: '0.25rem' }}>
               TS-402-C
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-              Turbine Rotor Assembly · Inconel 718
+              Turbine Rotor Assembly · Inconel 718 (Example)
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
             <div className="cad-metric-row">
-              <span className="cad-metric-label">Calculated Mass</span>
+              <span className="cad-metric-label">Estimated Mass</span>
               <span className="cad-metric-val">14.85 kg</span>
             </div>
             <div className="cad-metric-row">
@@ -74,8 +81,11 @@ export const CadViewerPlaceholder: React.FC = () => {
           </div>
 
           <div>
-            <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>
-              Bill of Materials (BOM)
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                Bill of Materials (BOM)
+              </div>
+              <span className="brand-badge" style={{ fontSize: '0.65rem', padding: '0.1rem 0.35rem' }}>Target Schema</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontFamily: 'var(--font-mono)', fontSize: '0.8rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>

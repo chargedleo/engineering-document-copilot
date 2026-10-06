@@ -9,14 +9,13 @@ export const DocumentList: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    let detectedType = 'SPECIFICATION';
-    const ext = file.name.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf' || ext === 'docx') detectedType = 'SPECIFICATION';
-    else if (ext === 'step' || ext === 'stp' || ext === 'iges' || ext === 'stl') detectedType = 'DRAWING';
-    else if (ext === 'dxf' || ext === 'dwg') detectedType = 'DRAWING';
-    else if (ext === 'xlsx' || ext === 'csv') detectedType = 'BOM';
+    if (!file.name.toLowerCase().endsWith('.pdf')) {
+      alert('Only engineering PDF documents (.pdf) are supported by the ingestion pipeline.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
 
-    await uploadDocument(file, detectedType as any);
+    await uploadDocument(file, 'SPECIFICATION');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -67,7 +66,7 @@ export const DocumentList: React.FC = () => {
         <div>
           <h1 className="registry-title">Document Registry</h1>
           <p className="registry-subtitle">
-            Verified engineering specifications, standard manuals, and CAD assemblies staged for indexing.
+            Verified engineering specifications and technical manuals (PDF) staged with page-aware text and OCR fallback.
           </p>
         </div>
 
@@ -75,6 +74,7 @@ export const DocumentList: React.FC = () => {
           <input
             type="file"
             ref={fileInputRef}
+            accept=".pdf"
             style={{ display: 'none' }}
             onChange={handleFileUpload}
           />

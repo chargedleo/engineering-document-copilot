@@ -4,7 +4,7 @@ import os
 import re
 from pathlib import Path
 from typing import Dict, Any, Union
-import fitz  # PyMuPDF
+import pymupdf as fitz
 from PIL import Image
 
 from app.core.config import settings

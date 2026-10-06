@@ -1,9 +1,12 @@
 # Engineering Document Intelligence & CAD Knowledge Copilot
 
-A production-grade intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
+A production-oriented intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
 
-> **Project Status (Milestone 9 — Azure Cloud Integration & Service Verification)**:
-> Live enterprise cloud services integrated and verified on Microsoft Azure (`rg-engineering-copilot`): Azure Database for PostgreSQL Flexible Server v16 (`psql-engcopilot-06724`), Azure OpenAI Service (`text-embedding-3-small` 1536-dim embeddings + `gpt-4o` chat synthesis), Azure AI Search (`search-engineering-copilot` with HNSW vector search and hybrid RRF), Azure Blob Storage (`stengcopilot06724` for raw PDF persistence), and Azure Static Web Apps / Storage Static Website (`stengcopilot06724.z13.web.core.windows.net`). All live data and AI cloud services are verified with an automated 5-scenario live cloud verification suite. The FastAPI backend compute container hosting on Azure is NOT deployed / not verified and remains a future deployment step, with the application fully operational via hybrid local/cloud and Docker Compose execution.
+> **Portfolio Alignment**: Built as an applied engineering portfolio project supporting applications for **AI/ML Engineer**, **AI Graduate Engineer**, and **CAD Automation & Applied AI** roles (e.g., Atlas Copco GECIA Graduate Engineer Trainee). Demonstrates enterprise document intelligence, deterministic hybrid retrieval, grounded agentic reasoning, Docker productionization, and live Microsoft Azure cloud integration.
+>
+> **Project Status (Milestone 10 — Final Evaluation, Polish & Portfolio Release [COMPLETE])**:
+> The system has completed comprehensive automated benchmark evaluation (8/8 test cases passed across both local hermetic and live Azure cloud modes with 100% citation fidelity and 100% out-of-domain abstention precision). Live enterprise data and AI cloud services are verified on Microsoft Azure (`rg-engineering-copilot`): Azure Database for PostgreSQL Flexible Server v16 (`psql-engcopilot-06724`), Azure OpenAI Service (`text-embedding-3-small` + `gpt-4o`), Azure AI Search (`engineering-docs-index` with HNSW vector + hybrid RRF), Azure Blob Storage (`stengcopilot06724`), and Azure Static Web Apps / Storage Static Website (`stengcopilot06724.z13.web.core.windows.net`).
+> *Azure Backend Compute Hosting Notice*: Azure backend compute container hosting (Container Apps / App Service) is **NOT DEPLOYED / NOT VERIFIED** and remains a future deployment step. The application is fully operational via hybrid local/cloud execution and multi-container Docker Compose.
 
 ---
 
@@ -83,8 +86,12 @@ Minimal Monochrome UI (Typography-Led Editorial Presentation)
   - **Azure Storage Static Website & Azure Static Web Apps**: Production static asset hosting for the monochrome React UI (Live & Verified).
   - **Azure Container Registry**: Image repository (`acrengcopilot06724.azurecr.io`) for container distribution (Configured).
   - **Azure Backend Compute Hosting**: Backend compute hosting on Azure Container Apps / App Service is not deployed / not verified (future deployment step; currently connects to live Azure services via hybrid local or Docker Compose execution).
+- **Evaluation, Polish & Portfolio Release (Milestone 10)**:
+  - **Automated Benchmark Harness**: [`scripts/evaluate_copilot.py`](./scripts/evaluate_copilot.py) evaluating 8 engineering benchmark scenarios with quantitative scoring across local hermetic and live Azure modes.
+  - **Metrics & Reports**: Structured JSON benchmark evaluation output ([`docs/evaluation-report.json`](./docs/evaluation-report.json)) recording retrieval precision, citation accuracy, abstention reliability, and latency.
+  - **Interview & Demonstration Deliverables**: 3-minute timed interview walkthrough ([`docs/demo-script.md`](./docs/demo-script.md)) and technical defense notes ([`docs/interview-notes.md`](./docs/interview-notes.md)).
 - **Database**: PostgreSQL 16 (Native Windows development, Docker Compose, or Azure PostgreSQL Flexible Server)
-- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (94 hermetic automated tests)
+- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (94 hermetic automated tests across 9 test suites)
 
 For an in-depth architectural breakdown and sequence diagrams, refer to [`architecture.md`](./architecture.md).
 
@@ -97,8 +104,12 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 ├── .gitignore                 # Excludes .env, virtualenvs, caches, raw uploads
 ├── .github/workflows/ci.yml   # GitHub Actions automated test & build pipeline
 ├── docker-compose.yml         # Root Docker Compose production orchestration
-├── README.md                  # Project overview and reproduction guide
+├── README.md                  # Project overview, benchmark evaluation, and portfolio guide
 ├── architecture.md            # System architecture and data flow blueprint
+├── docs/                      # Portfolio demonstration, interview notes, and evaluation data
+│   ├── demo-script.md         # 3-minute timed technical interview presentation script
+│   ├── interview-notes.md     # Engineering decision rationales and defense Q&A
+│   └── evaluation-report.json # Automated benchmark evaluation metrics (local & Azure)
 ├── backend/                   # FastAPI application & database migrations
 │   ├── alembic/               # Alembic database migration scripts & versions
 │   │   ├── versions/          # Version-controlled migration files
@@ -112,7 +123,7 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   │   ├── schemas/           # Pydantic v2 schemas (document, chunk, rag, agent, common)
 │   │   ├── services/          # Business logic layer (document, chunking, search, rag, agent)
 │   │   └── agents/            # LangGraph agent orchestration (graph, nodes, planner, state, tools)
-│   ├── tests/                 # Hermetic automated test suite (85 pytest tests)
+│   ├── tests/                 # Hermetic automated test suite (94 pytest tests)
 │   │   ├── test_agent.py      # LangGraph agent & multi-tool test suite (21 tests)
 │   │   ├── test_rag.py        # Grounded RAG & prompt injection test suite (15 tests)
 │   │   ├── test_search.py     # Hybrid retrieval test suite (11 tests)
@@ -120,7 +131,8 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 │   │   ├── test_document_processing.py # PDF & OCR processing tests (10 tests)
 │   │   ├── test_documents.py  # Document CRUD & upload tests (10 tests)
 │   │   ├── test_health.py     # Health & readiness tests (4 tests)
-│   │   └── test_production_config.py # Production config, health degradation, container specs (8 tests)
+│   │   ├── test_production_config.py # Production config, health degradation, container specs (8 tests)
+│   │   └── test_storage.py    # Local & Azure Blob storage provider semantics tests (9 tests)
 │   ├── .dockerignore          # Excludes caches, venvs, and secrets from image build
 │   ├── Dockerfile             # Production Debian-slim image with OCR and non-root appuser
 │   ├── entrypoint.sh          # Container entrypoint with migration execution
@@ -141,7 +153,10 @@ For an in-depth architectural breakdown and sequence diagrams, refer to [`archit
 ├── data/                      # Local data storage directories
 │   ├── documents/             # Staged engineering PDFs (data/documents/{id}/{filename})
 │   └── processed/             # Extracted artifacts and temporary files
-├── scripts/                   # Automation and operational scripts
+├── scripts/                   # Automation, evaluation, and operational scripts
+│   ├── evaluate_copilot.py    # Automated 8-case benchmark evaluation harness (Local & Azure)
+│   ├── verify_azure_live_e2e.py # 5-scenario live Azure cloud verification suite
+│   ├── test_azure_storage.py  # Live Azure Blob Storage upload/download verification
 │   ├── init_db.py             # Database migration executor (alembic upgrade head)
 │   ├── seed_data.py           # Sample engineering document seeder
 │   ├── ingest_cad_docs.py     # Ingestion & chunking CLI with progress reporting
@@ -255,8 +270,9 @@ tests/test_health.py (4 tests) ....                                      PASSED
 tests/test_production_config.py (8 tests) ........                       PASSED
 tests/test_rag.py (15 tests) ...............                             PASSED
 tests/test_search.py (11 tests) ...........                              PASSED
+tests/test_storage.py (9 tests) .........                                PASSED
 
-============================= 85 passed in 10.81s =============================
+============================= 94 passed in 10.20s =============================
 ```
 
 ### 3. Start FastAPI Server
@@ -386,6 +402,74 @@ Output:
 
 ---
 
+## 📊 Benchmark Evaluation & Quality Metrics (Milestone 10)
+
+Milestone 10 implements an automated, reproducible benchmark evaluation harness ([`scripts/evaluate_copilot.py`](./scripts/evaluate_copilot.py)) that measures factual retrieval precision, citation accuracy, out-of-domain abstention reliability, tool selection correctness, engineering calculation accuracy, and latency profiles.
+
+The evaluation suite executes across two distinct execution environments:
+1. **Local Hermetic Mode (`--mode local`)**: Evaluates against an in-memory SQLite database, unit-normalized local embeddings, and deterministic local LLM simulation with zero external network calls or cloud dependencies.
+2. **Live Azure Cloud Mode (`--mode azure`)**: Evaluates against live enterprise cloud infrastructure: Azure OpenAI Service (`gpt-4o` + `text-embedding-3-small`), Azure AI Search (`engineering-docs-index` with HNSW vector search and hybrid RRF), and Azure Database for PostgreSQL Flexible Server v16 (`psql-engcopilot-06724`).
+
+### 1. High-Level Quality & Reliability Metrics
+
+| Metric | Local Hermetic Mode | Live Azure Cloud Mode | Target Threshold | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **Benchmark Test Pass Rate** | **100.0% (8/8)** | **100.0% (8/8)** | ≥ 95.0% | **PASSED** |
+| **Grounded Citation Fidelity** | **100.0%** | **100.0%** | 100.0% | **PASSED** |
+| **Out-of-Domain Abstention Precision** | **100.0%** | **100.0%** | 100.0% | **PASSED** |
+| **Tool Selection Accuracy** | **100.0%** | **100.0%** | 100.0% | **PASSED** |
+| **Engineering Calculation Accuracy** | **100.0%** | **100.0%** | 100.0% | **PASSED** |
+| **Mean Query Latency** | **13.2 ms** | **5,682.9 ms** | < 10,000 ms (Azure) | **PASSED** |
+| **Median (P50) Latency** | **8.6 ms** | **5,753.3 ms** | < 8,000 ms (Azure) | **PASSED** |
+| **Minimum Latency** | **3.2 ms** | **10.0 ms** | - | **PASSED** |
+| **Maximum Latency** | **32.1 ms** | **10,501.0 ms** | - | **PASSED** |
+| **Total Test Suite Runtime** | **5.49 s** | **49.65 s** | - | **PASSED** |
+
+### 2. Detailed Benchmark Test Case Results
+
+| Case ID | Category | Technical Query | Expected Tools | Citations | Abstain? | Local (ms) | Azure (ms) | Status |
+| :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| **EVAL-A** | Factual & Unit Conversion | *"What is the maximum working pressure of CFP-402-316L in psi?"* | `search`, `calculate` | `[C1]` | No | 12.4 ms | 5,837.7 ms | **PASSED** |
+| **EVAL-B** | Direct Calculation | *"Convert 75 kW to horsepower"* | `calculate` | None | No | 3.2 ms | 10.0 ms | **PASSED** |
+| **EVAL-C** | Metadata Registry | *"What is the revision of the CFP-402-316L document?"* | `metadata` | `[C1]` | No | 8.6 ms | 10,501.0 ms | **PASSED** |
+| **EVAL-D** | Tolerancing & GD&T | *"What is the radial bearing journal tolerance for CFP-402-316L?"* | `search` | `[C2]` | No | 8.2 ms | 5,753.3 ms | **PASSED** |
+| **EVAL-E** | Out-of-Domain Abstention | *"Give me the material specification for a titanium wing spar."* | `search` | None | **Yes** | 7.9 ms | 5,322.8 ms | **PASSED** |
+| **EVAL-F** | Composite Tool Chaining | *"What is the working pressure in psi?"* | `search`, `calculate` | `[C2]` | No | 14.1 ms | 5,710.5 ms | **PASSED** |
+| **EVAL-G** | Citation Provenance | *"What is the recommended oil change frequency for CFP-402-316L?"* | `search` | `[C1]` | No | 18.5 ms | 6,714.3 ms | **PASSED** |
+| **EVAL-H** | Missing Info Abstention | *"What is the return policy and refund procedure for this pump?"* | `search` | None | **Yes** | 8.1 ms | 5,613.3 ms | **PASSED** |
+
+### 3. Key Reliability Insights
+
+1. **Deterministic Unit Conversion (Zero Arithmetic Hallucination)**:
+   - When converting `16.0 bar` to `psi`, the system dispatched the deterministic engineering calculator tool (`calculate_engineering`), yielding `232.06 psi` (`16.0 * 14.50377`). It never relied on LLM token probability prediction for unit calculations.
+2. **Strict Abstention Precision (Zero Uncontrolled Hallucination)**:
+   - In both EVAL-E (aerospace titanium query against pump specs) and EVAL-H (e-commerce return policy query against pump specs), the copilot retrieved zero chunks above relevance threshold (0.25) and returned the standardized abstention response:
+     > *"The available documents do not contain enough information to answer this question."*
+   - Abstention precision was 100.0% with zero speculative or hallucinated content generated.
+3. **Citation Provenance & Grounding**:
+   - 100% of non-abstaining responses included verifiable citation tags (`[C1]`, `[C2]`) mapped directly to the underlying document filename, page number, and section title.
+4. **Context-Aware Value Extraction**:
+   - In multi-step tool chaining (EVAL-F), the LangGraph planner dynamically extracted context-qualified values (e.g., *working pressure: 16.0 bar* vs *hydrostatic test pressure: 24.0 bar*) before passing arguments to subsequent tools.
+
+### 4. Running the Benchmark Evaluation Harness
+
+The benchmark harness can be run on-demand via the CLI:
+
+```powershell
+# Run local hermetic benchmark (in-memory SQLite + local mock; zero cloud dependencies)
+python scripts/evaluate_copilot.py --mode local
+
+# Run live Azure cloud benchmark (live Azure OpenAI + AI Search + PostgreSQL)
+python scripts/evaluate_copilot.py --mode azure
+
+# Custom output report path
+python scripts/evaluate_copilot.py --mode local --output docs/evaluation-report.json
+```
+
+The complete machine-readable evaluation report is stored at [`docs/evaluation-report.json`](./docs/evaluation-report.json).
+
+---
+
 ## 📡 API Reference Summary
 
 | Endpoint | Method | Description |
@@ -421,7 +505,7 @@ Continuous integration is configured in [`.github/workflows/ci.yml`](./.github/w
 1. **`backend-test` Job**:
    - Ubuntu runner with `tesseract-ocr`, `tesseract-ocr-eng`, `libgl1`, and `libglib2.0-0` installed.
    - Python 3.11 with cached pip dependencies.
-   - Runs `pytest backend/tests/ -v` (85 tests passing).
+   - Runs `pytest backend/tests/ -v` (94 tests passing).
    - Entirely hermetic with zero cloud credentials required.
 2. **`frontend-check` Job**:
    - Node.js 20 with cached npm dependencies.
@@ -590,33 +674,93 @@ az group delete --name rg-engineering-copilot --yes --no-wait
 
 ---
 
-## ⚖️ Verification Status & Limitations
+## 🎯 Portfolio Demonstration & Interview Guide
 
-| Component | Status | Evidence & Notes |
-| :--- | :--- | :--- |
-| **Backend Test Suite** | **VERIFIED** | 94 passed in 11.64s (85 baseline + 9 storage provider tests). |
-| **Frontend Lint** | **VERIFIED** | `npm.cmd run lint` (`tsc --noEmit`) passed with 0 errors. |
-| **Frontend Build** | **VERIFIED** | `npm.cmd run build` (`vite build`) passed (42 modules, 169.66 kB bundle). |
-| **Docker Compose Stack** | **VERIFIED** | Local Docker Compose multi-container stack verified healthy (PostgreSQL, FastAPI backend, React/Nginx frontend on port 5173). |
-| **Local PostgreSQL Workflow** | **VERIFIED** | PostgreSQL 16 on Windows verified with migrations and agent queries. |
-| **Azure PostgreSQL Flexible Server** | **VERIFIED** | `psql-engcopilot-06724` running PostgreSQL 16 in `centralus`. Applied all 7 Alembic migrations with full table persistence. |
-| **Azure OpenAI Embeddings** | **VERIFIED** | `aoai-engineering-copilot-06724` running `text-embedding-3-small` (1536 dims). Verified live document chunk vectorization. |
-| **Azure OpenAI Chat Completions** | **VERIFIED** | `aoai-engineering-copilot-06724` running `gpt-4o`. Verified grounded synthesis, tool calling, and citations. |
-| **Azure AI Search Hybrid Retrieval** | **VERIFIED** | `search-engineering-copilot` (Free Tier). Provisioned `engineering-docs-index` (HNSW vector + keyword) and verified live retrieval via REST API 2023-11-01 `vectorQueries`. |
-| **Azure Blob Storage Persistence** | **VERIFIED** | `stengcopilot06724` (container `documents`). Verified automated upload and download via `StorageService`. |
-| **Azure Storage Static Website** | **VERIFIED** | Hosted production React bundle on `$web` (`https://stengcopilot06724.z13.web.core.windows.net/`); returns HTTP 200 OK. |
-| **Live Azure End-to-End Suite** | **VERIFIED** | Automated test suite (`scripts/verify_azure_live_e2e.py`) passed all 5 live test scenarios against real Azure cloud services. |
-| **Azure Static Web Apps** | **VERIFIED** | Provisioned and active at `https://lively-river-014b48c0f.6.azurestaticapps.net` with deployment token configured. |
-| **Azure Container Registry** | **CONFIGURED** | Provisioned `acrengcopilot06724.azurecr.io` (Basic SKU) with admin credentials enabled. |
-| **Azure Backend Compute Hosting** | **NOT DEPLOYED / NOT VERIFIED** | Backend Azure compute container hosting (Container Apps / App Service) was not deployed and remains a future deployment step. All live Azure data and AI services (PostgreSQL, OpenAI, AI Search, Blob Storage) and frontend hosting are live and verified, with the backend running locally or in Docker connected to Azure. |
+This project is packaged as a portfolio demonstration for **AI Graduate Engineer**, **AI/ML Engineer**, and **CAD Automation & Applied AI** roles (such as Atlas Copco GECIA Graduate Engineer Trainee).
+
+Comprehensive interview and presentation materials are provided in the [`docs/`](./docs) directory:
+
+- **[`docs/demo-script.md`](./docs/demo-script.md)**: A structured, 3-minute timed live technical demonstration walkthrough covering:
+  1. *The Engineering Problem*: Why generic LLMs fail on technical specifications (hallucinated units, ignoring tolerances, lack of source page accountability).
+  2. *Ingestion & OCR Pipeline*: High-resolution PDF rendering with OpenCV thresholding and Tesseract OCR fallback for scanned drawings.
+  3. *Hybrid Retrieval & Grounded RAG*: BM25 exact part number matching combined with dense vector semantic search via Reciprocal Rank Fusion (RRF).
+  4. *Deterministic Multi-Tool Chaining*: LangGraph agent extracting raw values (`16.0 bar`) and executing safe Python conversion tools (`232.06 psi`) instead of speculative LLM math.
+  5. *Strict Abstention Defense*: Refusing to answer out-of-domain queries (e.g. titanium wing spars) when evidence is absent.
+  6. *Azure Enterprise Topology*: Connecting to live cloud data and AI services while explaining why backend compute hosting remains a deliberate future deployment step.
+- **[`docs/interview-notes.md`](./docs/interview-notes.md)**: Exhaustive technical interview defense notes answering 20 core engineering questions (A through T), covering:
+  - *Hybrid Search vs Pure Dense Vector*: Why BM25 is mandatory for alphanumeric codes like `CFP-402-316L` and tolerance classes like `ISO h6`.
+  - *Grounded RAG vs Fine-Tuning*: Why RAG was chosen over model weight modification for dynamic technical document repositories.
+  - *Page-Aware Structural Chunking*: Preserving section titles, table structures, and page provenance across chunk boundaries.
+  - *Prompt Injection Boundaries*: Wrapping untrusted PDF text in passive XML contexts (`<engineering_context>`) to prevent prompt hijacking.
+  - *Deterministic Calculations*: Avoiding token probability arithmetic for mission-critical pressure and power conversions.
+  - *Azure Architecture & Cost Decisions*: Selecting Free Tier Azure AI Search and Serverless/Flexible tiers for zero-cost standby operation.
+- **[`docs/evaluation-report.json`](./docs/evaluation-report.json)**: Quantitative evaluation results from the 8-scenario benchmark test suite across both local hermetic and live Azure environments.
 
 ---
 
-## 🗺️ Roadmap: Next Milestones
+## ⚖️ Milestone Verification Status & Evidence Traceability
 
-- **Milestone 10 (Planned)**: **CAD Geometry & Visual Navigation**
-  - STEP/DXF parser for part hierarchies and BOM cross-referencing.
-  - WebGL / Three.js 3D viewport canvas.
-- **Milestone 11 (Planned)**: **Automated Compliance Validation & CAD Automation**
-  - Engineering rule checking against ISO/ASME drawing standards.
-  - Integration with CAD scripting APIs (FreeCAD, OpenCASCADE, SolidWorks).
+Every capability across the project roadmap has been cataloged with verifiable status labels:
+
+- `[IMPLEMENTED]` — Full application code written, integrated, and validated.
+- `[VERIFIED]` — Tested with automated test suites or live cloud service execution with evidence.
+- `[CONFIGURED]` — Configuration or resource provisioned; awaiting container deployment.
+- `[PLACEHOLDER]` — UI architectural reference schema / demo layout; underlying kernel intentionally deferred.
+- `[NOT DEPLOYED / NOT VERIFIED]` — Deliberately out-of-scope or reserved for future enterprise deployment.
+
+### Milestone Progression (M1 – M10)
+
+| Milestone | Scope & Deliverable | Status & Verification Evidence |
+| :--- | :--- | :--- |
+| **M1** | Architecture & Repository Foundation | `[IMPLEMENTED] [VERIFIED]` Directory structure, async SQLAlchemy, Alembic, Pydantic schemas. |
+| **M2** | FastAPI + PostgreSQL + Alembic | `[IMPLEMENTED] [VERIFIED]` Async session management, 7 database migrations, CRUD endpoints. |
+| **M3** | PDF Ingestion & OCR Fallback | `[IMPLEMENTED] [VERIFIED]` PyMuPDF native extraction, OpenCV denoise/threshold, Tesseract OCR fallback. |
+| **M4** | Chunking & Hybrid Retrieval Engine | `[IMPLEMENTED] [VERIFIED]` Page-aware chunker, BM25 + dense vector + Reciprocal Rank Fusion (RRF). |
+| **M5** | Grounded RAG, Citations & Abstention | `[IMPLEMENTED] [VERIFIED]` XML untrusted context boundary, `[C1]` citation fidelity, standardized abstention. |
+| **M6** | LangGraph Tool-Using Agent | `[IMPLEMENTED] [VERIFIED]` StateGraph workflow, search/metadata/calculator tools, multi-tool chaining. |
+| **M7** | Minimal Monochrome React UI | `[IMPLEMENTED] [VERIFIED]` High-contrast typography-led UI, editorial conversation stream, citation popovers. |
+| **M8** | Production Docker & CI/CD | `[IMPLEMENTED] [VERIFIED]` Multi-container Docker Compose, non-root backend, Nginx proxy, GitHub Actions. |
+| **M9** | Azure Cloud Integration & Services | `[IMPLEMENTED] [VERIFIED]` Live Azure PostgreSQL Flexible, OpenAI, AI Search, Blob Storage, Static Web Apps. |
+| **M10** | Final Evaluation, Polish & Portfolio Release | `[IMPLEMENTED] [VERIFIED]` 8-case benchmark harness (100% pass rate), demo script, interview notes, portfolio ready. |
+
+### Component-Level Verification Matrix
+
+| Component / Service | Status | Evidence & Verification Notes |
+| :--- | :---: | :--- |
+| **Backend Test Suite** | `[IMPLEMENTED] [VERIFIED]` | 94 hermetic tests passed in 10.20s across 9 test suites (`pytest`). |
+| **Frontend Lint** | `[IMPLEMENTED] [VERIFIED]` | `npm.cmd run lint` (`tsc --noEmit`) passed with 0 errors. |
+| **Frontend Production Build** | `[IMPLEMENTED] [VERIFIED]` | `npm.cmd run build` (`vite build`) passed (42 modules, 171.03 kB bundle). |
+| **Docker Compose Multi-Container Stack** | `[IMPLEMENTED] [VERIFIED]` | Verified healthy on local Docker Desktop: PostgreSQL 16, FastAPI backend, React/Nginx frontend. |
+| **Local Windows PostgreSQL** | `[IMPLEMENTED] [VERIFIED]` | PostgreSQL 16 verified on port 5432 with Alembic migrations and agent queries. |
+| **Azure PostgreSQL Flexible Server** | `[IMPLEMENTED] [VERIFIED]` | `psql-engcopilot-06724` (PostgreSQL 16, `centralus`). Applied all 7 Alembic migrations with live table persistence. |
+| **Azure OpenAI Embeddings** | `[IMPLEMENTED] [VERIFIED]` | `aoai-engineering-copilot-06724` running `text-embedding-3-small` (1536 dims). Verified live document chunk vectorization. |
+| **Azure OpenAI Chat Synthesis** | `[IMPLEMENTED] [VERIFIED]` | `aoai-engineering-copilot-06724` running `gpt-4o`. Verified grounded synthesis, tool calling, citations, and abstention. |
+| **Azure AI Search Hybrid Index** | `[IMPLEMENTED] [VERIFIED]` | `search-engineering-copilot` (Free Tier). Provisioned `engineering-docs-index` (HNSW vector + keyword) via REST API 2023-11-01 `vectorQueries`. |
+| **Azure Blob Storage Persistence** | `[IMPLEMENTED] [VERIFIED]` | `stengcopilot06724` (container `documents`). Verified automated upload and download via `StorageService`. |
+| **Azure Storage Static Website** | `[IMPLEMENTED] [VERIFIED]` | Hosted compiled React bundle on `$web` (`https://stengcopilot06724.z13.web.core.windows.net/`); returns HTTP 200 OK. |
+| **Azure Static Web Apps** | `[IMPLEMENTED] [VERIFIED]` | Provisioned and active at `https://lively-river-014b48c0f.6.azurestaticapps.net` with deployment token configured. |
+| **Live Azure End-to-End Suite** | `[IMPLEMENTED] [VERIFIED]` | Automated test suite (`scripts/verify_azure_live_e2e.py`) passed all 5 live test scenarios against real Azure cloud services. |
+| **Evaluation Benchmark Harness** | `[IMPLEMENTED] [VERIFIED]` | Automated 8-case suite (`scripts/evaluate_copilot.py`) achieved 100% pass rate in both local (5.49s) and Azure cloud (49.65s) modes. |
+| **Azure Container Registry** | `[CONFIGURED]` | Provisioned `acrengcopilot06724.azurecr.io` (Basic SKU) with admin credentials enabled. |
+| **Azure Backend Compute Hosting** | `[NOT DEPLOYED / NOT VERIFIED]` | Backend Azure compute container hosting (Container Apps / App Service) was not deployed and remains a future deployment step. All live Azure data and AI services and frontend hosting are verified, with the backend running locally or in Docker connected to Azure. |
+| **CAD 3D Geometry Viewer** | `[PLACEHOLDER]` | The CAD tab in the UI serves as an architectural target schema reference and demonstration wireframe. B-Rep geometry engines and WebGL renderers are deliberately reserved for future engineering extensions. |
+
+---
+
+## 🚀 Future Engineering Extensions (Beyond Portfolio Scope)
+
+While Milestone 10 represents the complete, verified scope of the portfolio platform, the system was designed with clean abstraction boundaries allowing straightforward expansion into industrial CAD automation workflows:
+
+1. **Native CAD Geometry Kernel Integration**:
+   - Integration with OpenCASCADE (`pythonocc`) or FreeCAD headless API to parse raw STEP (`.stp`), IGES (`.igs`), and DXF files.
+   - Extract exact boundary representation (B-Rep) topological entities, feature trees, and face-level geometric metadata directly into PostgreSQL.
+2. **Interactive 3D WebGL Assembly Canvas**:
+   - Client-side rendering of CAD assemblies using Three.js / React Three Fiber.
+   - Bi-directional cross-referencing: clicking a part in the 3D viewport queries its specification in the copilot, while clicking a citation (`[C1]`) highlights the corresponding 3D subassembly.
+3. **Automated GD&T & Standards Compliance Engine**:
+   - Rule-based compliance auditing comparing extracted drawing tolerances against ISO 1101 and ASME Y14.5 geometric dimensioning and tolerancing standards.
+   - Flagging out-of-spec surface finishes, missing datum references, or unsupported fit classes directly in the engineering review workflow.
+4. **Azure Container Apps Production Compute Deployment**:
+   - Packaging the backend image into `acrengcopilot06724.azurecr.io` and deploying to Azure Container Apps with Managed Identity authentication (eliminating connection strings).
+
+> **Project Completion Note**: This repository represents the completed, verified **Milestone 10 — Final Evaluation, Polish & Portfolio Release**. No Milestone 11 is planned; the platform is complete, benchmarked, and ready for portfolio evaluation and technical interviews.

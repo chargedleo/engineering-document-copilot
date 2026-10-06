@@ -28,7 +28,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeTab, onTabChange }) => {
           className={`nav-link ${activeTab === 'cad' ? 'active' : ''}`}
           onClick={() => onTabChange('cad')}
         >
-          CAD Attributes
+          CAD Attributes (Planned)
         </button>
         <button
           className={`nav-link ${activeTab === 'architecture' ? 'active' : ''}`}

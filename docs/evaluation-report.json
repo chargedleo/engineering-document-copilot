@@ -1,0 +1,167 @@
+{
+  "timestamp": "2026-10-06T13:35:55Z",
+  "mode": "azure",
+  "environment": "Live Azure Cloud Stack (OpenAI gpt-4o + AI Search + PostgreSQL)",
+  "total_cases": 8,
+  "passed": 8,
+  "failed": 0,
+  "pass_rate_pct": 100.0,
+  "abstention_accuracy_pct": 100.0,
+  "citation_fidelity_pct": 100.0,
+  "tool_selection_accuracy_pct": 100.0,
+  "calculation_accuracy_pct": 100.0,
+  "latency_metrics": {
+    "mean_ms": 5682.88,
+    "p50_ms": 5753.27,
+    "min_ms": 10.0,
+    "max_ms": 10501.02
+  },
+  "results": [
+    {
+      "case_id": "EVAL-A",
+      "category": "Factual Retrieval & Unit Conversion",
+      "query": "What is the maximum working pressure of CFP-402-316L in psi?",
+      "passed": true,
+      "latency_ms": 5837.717899998097,
+      "actual_tools": [
+        "search_engineering_documents",
+        "calculate_engineering"
+      ],
+      "actual_abstain": false,
+      "citation_count": 1,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "The maximum working pressure of the CFP-402-316L is 232 psi at 20 \u00b0C [C1]. Using the engineering conversion tool, this c"
+    },
+    {
+      "case_id": "EVAL-B",
+      "category": "Deterministic Engineering Calculation",
+      "query": "Convert 75 kW to horsepower",
+      "passed": true,
+      "latency_ms": 9.996400000090944,
+      "actual_tools": [
+        "calculate_engineering"
+      ],
+      "actual_abstain": false,
+      "citation_count": 0,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "Using the engineering calculator tool: 75.0 kW * 1.34102 = 100.58 hp."
+    },
+    {
+      "case_id": "EVAL-C",
+      "category": "Document Metadata Registry",
+      "query": "What is the revision of the CFP-402-316L document?",
+      "passed": true,
+      "latency_ms": 10501.020000003336,
+      "actual_tools": [
+        "get_document_metadata"
+      ],
+      "actual_abstain": false,
+      "citation_count": 1,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "According to verified engineering document metadata, document 'sample_pump_spec.pdf' (Part Number: CFP-402-316L) is curr"
+    },
+    {
+      "case_id": "EVAL-D",
+      "category": "Engineering Detail & Tolerancing",
+      "query": "What is the radial bearing journal tolerance for CFP-402-316L?",
+      "passed": true,
+      "latency_ms": 5753.274599999713,
+      "actual_tools": [
+        "search_engineering_documents"
+      ],
+      "actual_abstain": false,
+      "citation_count": 1,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "The radial bearing journal tolerance for CFP-402-316L is ISO h6 (-0.000 / -0.016 mm) [C2]."
+    },
+    {
+      "case_id": "EVAL-E",
+      "category": "Out-of-Domain Abstention",
+      "query": "Give me the material specification for a titanium wing spar.",
+      "passed": true,
+      "latency_ms": 5322.8311999992,
+      "actual_tools": [
+        "search_engineering_documents"
+      ],
+      "actual_abstain": true,
+      "citation_count": 0,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "The available documents do not contain enough information to answer this question."
+    },
+    {
+      "case_id": "EVAL-F",
+      "category": "Multi-Step Composite Tool Chaining",
+      "query": "What is the working pressure in psi?",
+      "passed": true,
+      "latency_ms": 5710.521799999697,
+      "actual_tools": [
+        "search_engineering_documents",
+        "calculate_engineering"
+      ],
+      "actual_abstain": false,
+      "citation_count": 1,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "The maximum working pressure is 232 psi at 20 \u00b0C [C2]. Using the engineering conversion tool, this corresponds to approx"
+    },
+    {
+      "case_id": "EVAL-G",
+      "category": "Document Grounding & Citation Provenance",
+      "query": "What is the recommended oil change frequency for CFP-402-316L?",
+      "passed": true,
+      "latency_ms": 6714.325999997527,
+      "actual_tools": [
+        "search_engineering_documents"
+      ],
+      "actual_abstain": false,
+      "citation_count": 1,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "The recommended oil change frequency for the CFP-402-316L is every 4000 operational hours or 6 months [C1]."
+    },
+    {
+      "case_id": "EVAL-H",
+      "category": "Missing Information Abstention",
+      "query": "What is the return policy and refund procedure for this pump?",
+      "passed": true,
+      "latency_ms": 5613.321400000132,
+      "actual_tools": [
+        "search_engineering_documents"
+      ],
+      "actual_abstain": true,
+      "citation_count": 0,
+      "tool_match": true,
+      "abstain_match": true,
+      "citation_match": true,
+      "grounding_match": true,
+      "failure_reasons": [],
+      "answer_preview": "The available documents do not contain enough information to answer this question."
+    }
+  ]
+}

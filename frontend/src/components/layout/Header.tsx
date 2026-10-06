@@ -33,7 +33,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
           <div className="brand-mark">
             <span>Engineering Copilot</span>
-            <span className="brand-badge">M7</span>
+            <span className="brand-badge">M10</span>
           </div>
 
           <nav className="nav-links">
@@ -53,7 +53,7 @@ export const Header: React.FC<HeaderProps> = ({ activeTab, onTabChange }) => {
               className={`nav-link ${activeTab === 'cad' ? 'active' : ''}`}
               onClick={() => onTabChange('cad')}
             >
-              CAD Attributes
+              CAD Attributes (Planned)
             </button>
             <button
               className={`nav-link ${activeTab === 'architecture' ? 'active' : ''}`}

@@ -11,7 +11,7 @@ export const ArchitectureView: React.FC = () => {
           </p>
         </div>
         <div>
-          <span className="brand-badge">Milestone 7 · UI System</span>
+          <span className="brand-badge">Milestone 10 · System Architecture</span>
         </div>
       </div>
 
@@ -61,7 +61,9 @@ export const ArchitectureView: React.FC = () => {
         <p className="arch-text">
           Abstract provider interfaces decouple local deterministic execution from cloud dependencies.
           The system runs hermetically with <code>LocalMockChatProvider</code> and <code>LocalMockEmbeddingProvider</code>,
-          with configuration-ready adapters for <code>AzureOpenAIChatProvider</code> and <code>AzureSearchIndex</code>.
+          and is verified live against Azure OpenAI (<code>gpt-4o</code> + <code>text-embedding-3-small</code>),
+          Azure AI Search (<code>engineering-docs-index</code>), Azure PostgreSQL Flexible Server, and Azure Blob Storage.
+          Backend container cloud compute hosting remains a future deployment step.
         </p>
       </div>
     </div>

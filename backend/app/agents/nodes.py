@@ -106,23 +106,34 @@ async def execute_tools_node(
 
             # Dynamic extraction: if numerical value was not given directly in query, extract from retrieved chunks
             if val is None and retrieved_chunks:
-                for chunk in retrieved_chunks:
-                    text = chunk.get("content", "")
-                    if op in ("bar_to_psi", "psi_to_bar"):
-                        match = re.search(r"(\d+(?:\.\d+)?)\s*bar\b", text, re.IGNORECASE)
+                # Targeted pass: prioritize working/maximum/design pressure when requested
+                if op in ("bar_to_psi", "psi_to_bar"):
+                    for chunk in retrieved_chunks:
+                        text = chunk.get("content", "")
+                        match = re.search(r"(?:working|maximum|design)\s+pressure[:\s]+(\d+(?:\.\d+)?)\s*bar\b", text, re.IGNORECASE)
                         if match:
                             val = float(match.group(1))
                             break
-                    elif op in ("celsius_to_fahrenheit", "fahrenheit_to_celsius"):
-                        match = re.search(r"(\d+(?:\.\d+)?)\s*°?C\b", text)
-                        if match:
-                            val = float(match.group(1))
-                            break
-                    elif op in ("flow_m3h_to_lpm", "flow_lpm_to_m3h"):
-                        match = re.search(r"(\d+(?:\.\d+)?)\s*m[3³]/h\b", text, re.IGNORECASE)
-                        if match:
-                            val = float(match.group(1))
-                            break
+
+                # General pass: extract first matching unit across chunks
+                if val is None:
+                    for chunk in retrieved_chunks:
+                        text = chunk.get("content", "")
+                        if op in ("bar_to_psi", "psi_to_bar"):
+                            match = re.search(r"(\d+(?:\.\d+)?)\s*bar\b", text, re.IGNORECASE)
+                            if match:
+                                val = float(match.group(1))
+                                break
+                        elif op in ("celsius_to_fahrenheit", "fahrenheit_to_celsius"):
+                            match = re.search(r"(\d+(?:\.\d+)?)\s*°?C\b", text)
+                            if match:
+                                val = float(match.group(1))
+                                break
+                        elif op in ("flow_m3h_to_lpm", "flow_lpm_to_m3h"):
+                            match = re.search(r"(\d+(?:\.\d+)?)\s*m[3³]/h\b", text, re.IGNORECASE)
+                            if match:
+                                val = float(match.group(1))
+                                break
 
             if val is not None:
                 res = EngineeringCalculatorTool.run(operation=op, value=val, value2=val2)

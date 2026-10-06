@@ -1,7 +1,7 @@
 import pytest
 import numpy as np
 from httpx import AsyncClient
-import fitz
+import pymupdf as fitz
 
 from app.services.embeddings.local_mock import LocalMockEmbeddingProvider
 from app.services.search.local_index import LocalSearchIndex

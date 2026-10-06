@@ -107,6 +107,17 @@ export const ChatWindow: React.FC = () => {
                 <span>Convert 75 kW to horsepower</span>
                 <span className="starter-arrow">→</span>
               </button>
+
+              <button
+                type="button"
+                className="starter-item"
+                onClick={() =>
+                  sendQuery('Give me the material specification for a titanium wing spar.')
+                }
+              >
+                <span>Give me the material specification for a titanium wing spar. (Abstention Demo)</span>
+                <span className="starter-arrow">→</span>
+              </button>
             </div>
           </div>
         </section>

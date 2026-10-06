@@ -114,7 +114,7 @@ async def test_create_document_validation_failure(async_client: AsyncClient):
 
 def generate_test_pdf_bytes() -> bytes:
     """Generate in-memory multi-page test PDF bytes using fitz."""
-    import fitz
+    import pymupdf as fitz
     doc = fitz.open()
     p1 = doc.new_page(width=595, height=842)
     p1.insert_text(

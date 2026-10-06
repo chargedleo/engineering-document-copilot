@@ -3,7 +3,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Union
-import fitz  # PyMuPDF
+import pymupdf as fitz
 
 from app.core.config import settings
 from app.services.document_processing.pdf_extractor import (

@@ -1,7 +1,6 @@
 import io
 import pytest
-from unittest.mock import patch
-import fitz
+import pymupdf as fitz
 from PIL import Image, ImageDraw
 
 from app.services.document_processing.pdf_extractor import (

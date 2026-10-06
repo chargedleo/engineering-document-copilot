@@ -1,5 +1,5 @@
 import pytest
-import fitz
+import pymupdf as fitz
 from httpx import AsyncClient
 from pydantic import ValidationError
 
