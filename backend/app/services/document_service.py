@@ -19,6 +19,7 @@ from app.services.document_processing.processor import (
     DocumentProcessingError,
 )
 from app.services.document_processing.pdf_extractor import PDFValidationError
+from app.services.storage import StorageService
 
 logger = logging.getLogger("engineering_copilot.document_service")
 
@@ -173,6 +174,13 @@ class DocumentService:
         try:
             with open(target_file_path, "wb") as f:
                 f.write(file_bytes)
+
+            # Optional cloud persistence: upload to Azure Blob Storage if configured
+            blob_url = StorageService.upload_document_blob(doc.id, safe_name, file_bytes)
+            if blob_url:
+                current_meta = dict(doc.metadata_payload or {})
+                current_meta["azure_blob_url"] = blob_url
+                doc.metadata_payload = current_meta
 
             # Update document file_path (stored relative to project or absolute safe path)
             doc.file_path = str(target_file_path)

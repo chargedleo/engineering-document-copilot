@@ -16,6 +16,7 @@ aiosqlite>=0.20.0
 # Utilities
 python-dotenv>=1.0.1
 httpx>=0.27.0
+azure-storage-blob>=12.20.0
 
 # Document Intelligence & OCR (Milestone 3)
 PyMuPDF>=1.24.0

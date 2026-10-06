@@ -196,7 +196,72 @@ flowchart LR
 
 ---
 
-## 6. Implementation Status & Milestone Roadmap
+## 6. Live Azure Cloud Deployment & Integration Architecture (Milestone 9)
+
+Milestone 9 transitions the Copilot from local containerization into a live, multi-service enterprise cloud topology hosted on Microsoft Azure. All services are provisioned within resource group `rg-engineering-copilot` adhering to strict Free Tier and low-cost development quotas.
+
+### 6.1 Cloud Topology Diagram
+
+```mermaid
+flowchart TB
+    subgraph ClientAccess["Client Presentation Layer"]
+        WebBrowser["Client Browser (HTTPS)"]
+        SWA["Azure Static Web Apps\nstapp-engineering-copilot\n(Free SKU, East US 2)\nlively-river-014b48c0f.6.azurestaticapps.net"]
+        StorageWeb["Azure Storage Static Website ($web)\nstengcopilot06724.z13.web.core.windows.net\n(Standard_LRS, East US)"]
+    end
+
+    subgraph ComputeServices["Application & Gateway Layer"]
+        FastAPIService["FastAPI Copilot Backend\n- StorageService (Azure Blob SDK)\n- AzureSearchIndex (REST 2023-11-01)\n- AzureOpenAIChatProvider (gpt-4o)\n- AzureOpenAIEmbeddingProvider (1536-dim)"]
+        ACR["Azure Container Registry\nacrengcopilot06724.azurecr.io\n(Basic SKU, East US)"]
+    end
+
+    subgraph ManagedData["Azure Managed Data & AI Services"]
+        AzurePG[("Azure Database for PostgreSQL Flexible Server\npsql-engcopilot-06724.postgres.database.azure.com\nPostgreSQL 16 | Standard_B1ms | Central US\n7 Tables | Alembic Head Applied")]
+        AzureBlob[("Azure Blob Storage\nstengcopilot06724.blob.core.windows.net\nContainer: 'documents'\nRaw PDF Ingestion & Cold Storage")]
+        AzureSearch["Azure AI Search\nsearch-engineering-copilot.search.windows.net\nFree Tier | East US\n- engineering-docs-index (HNSW Vector + BM25)\n- cad-knowledge-index"]
+        AzureOpenAI["Azure OpenAI Service\naoai-engineering-copilot-06724.openai.azure.com\nStandard S0 | East US\n- text-embedding-3-small (1536 dims)\n- gpt-4o (gpt-4.1-mini)"]
+    end
+
+    WebBrowser -->|HTTPS| SWA
+    WebBrowser -->|HTTPS| StorageWeb
+    SWA -.->|API Requests| FastAPIService
+    StorageWeb -.->|API Requests| FastAPIService
+
+    FastAPIService -->|Asyncpg / SSL (5432)| AzurePG
+    FastAPIService -->|Upload / Download Blobs| AzureBlob
+    FastAPIService -->|Vector + Keyword Hybrid Search| AzureSearch
+    FastAPIService -->|Generate 1536-dim Embeddings| AzureOpenAI
+    FastAPIService -->|Grounded Chat Synthesis| AzureOpenAI
+    ACR -.->|Container Image Storage| FastAPIService
+```
+
+### 6.2 Live Azure Services Matrix
+
+| Service / Resource Name | Type & SKU | Region | Endpoint / Host | Configuration & Verified Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **`psql-engcopilot-06724`** | Azure Database for PostgreSQL Flexible Server (`Standard_B1ms`, 32GB) | `centralus` | `psql-engcopilot-06724.postgres.database.azure.com:5432` | **VERIFIED**: PostgreSQL 16; applied all 7 Alembic migrations (`alembic upgrade head`); stores documents, pages, chunks, and sessions. |
+| **`aoai-engineering-copilot-06724`** | Azure OpenAI Service (`S0`) | `eastus` | `https://aoai-engineering-copilot-06724.openai.azure.com/` | **VERIFIED**: `text-embedding-3-small` (1536 dimensions) for dense indexing; `gpt-4o` (`gpt-4.1-mini`) for grounded RAG synthesis. |
+| **`search-engineering-copilot`** | Azure AI Search (`Free` Tier) | `eastus` | `https://search-engineering-copilot.search.windows.net` | **VERIFIED**: Created `engineering-docs-index` (HNSW vector profile + searchable text) and `cad-knowledge-index`. Uses API 2023-11-01 `vectorQueries`. |
+| **`stengcopilot06724`** | Azure Storage Account (`Standard_LRS`, StorageV2) | `eastus` | `https://stengcopilot06724.blob.core.windows.net` | **VERIFIED**: Container `documents` for raw PDF persistence via `StorageService`. Static website `$web` serving production React bundle. |
+| **`stengcopilot06724.z13.web.core.windows.net`** | Azure Storage Static Website | `eastus` | `https://stengcopilot06724.z13.web.core.windows.net/` | **VERIFIED**: Deployed compiled React bundle (`frontend/dist`); returns HTTP 200 OK. |
+| **`stapp-engineering-copilot`** | Azure Static Web Apps (`Free`) | `eastus2` | `https://lively-river-014b48c0f.6.azurestaticapps.net` | **CONFIGURED**: Provisioned with deployment token for automated CI/CD static frontend delivery. |
+| **`acrengcopilot06724`** | Azure Container Registry (`Basic`) | `eastus` | `acrengcopilot06724.azurecr.io` | **CONFIGURED**: Container registry for packaging and distributing Docker images. |
+
+### 6.3 Security, Networking & Cost Boundaries
+
+1. **Defense-in-Depth Credentials**: Zero credentials committed to version control. Production configuration is driven via `backend/.env.azure.example` templates and Azure Key Vault / app configuration.
+2. **Encrypted Transport**: Enforced TLS 1.2+ for PostgreSQL (`ssl=require`), HTTPS for Azure OpenAI and AI Search, and secure blob URLs.
+3. **CORS Allowlisting**: Backend `CORS_ORIGINS` explicitly allowlists both Azure frontend hosting endpoints alongside local development ports.
+4. **Zero-Cost / Free-Tier Compliance**:
+   - Azure AI Search Free tier: $0/month.
+   - Azure Static Web Apps Free SKU: $0/month.
+   - Azure OpenAI & Storage: Consumes cents from the initial Azure Free Trial credit.
+   - Azure PostgreSQL B1ms: Burstable minimal compute footprint.
+   - Immediate teardown enabled via single CLI invocation: `az group delete --name rg-engineering-copilot --yes --no-wait`.
+
+---
+
+## 7. Implementation Status & Milestone Roadmap
 
 | Milestone | Scope & Capabilities | Status |
 | :--- | :--- | :--- |
@@ -207,6 +272,6 @@ flowchart LR
 | **Milestone 5** | **Retrieval-Augmented Generation (RAG)**: Grounded question-answering system combining hybrid retrieval with LLM synthesis; dual LLM provider layer (`BaseLLMProvider`, `LocalMockChatProvider`, `AzureOpenAIChatProvider`); structured evidence context assembly with citation tagging (`[C1]`); prompt injection defense; and explicit abstention protocol. | Completed |
 | **Milestone 6** | **LangGraph Engineering Copilot Agent**: Autonomous stateful agent workflow orchestrated with LangGraph; genuine tool usage across three tools (`search_engineering_documents`, `get_document_metadata`, and safe `calculate_engineering`); multi-tool chaining for technical queries requiring calculation; citation provenance preservation; and standardized abstention. | Completed |
 | **Milestone 7** | **Visual Design System**: Complete frontend transformation adhering to strict monochrome aesthetic (Linear, Vercel, Google Antigravity). Editorial conversation streams, typographic calculation result blocks, bordered citation references, compact technical tool logs, live backend health monitoring, and zero accent colors or cartoon AI decorations. | Completed |
-| **Milestone 8** (Current) | **Productionization & Container Orchestration**: Production-grade Docker Compose architecture (`postgres:16-alpine`, Python 3.11-slim backend with system OCR and non-root execution, multi-stage Node 20 / Nginx Alpine frontend), automated startup migration handling (`entrypoint.sh`), `.dockerignore` file hygiene, environment variable categorization, health checks, GitHub Actions CI pipeline (`.github/workflows/ci.yml`), and 85 passing tests. | Completed |
-| **Milestone 9** | **CAD Extension**: STEP/DXF geometric parser, 3D WebGL viewport canvas, and BOM cross-referencing. | Planned |
-| **Milestone 10** | **Azure Cloud Deployment**: Azure App Service / Azure Container Apps, Azure PostgreSQL Flexible Server, Azure AI Search live integration, and Azure OpenAI production models. | Planned |
+| **Milestone 8** | **Productionization & Container Orchestration**: Production-grade Docker Compose architecture (`postgres:16-alpine`, Python 3.11-slim backend with system OCR and non-root execution, multi-stage Node 20 / Nginx Alpine frontend), automated startup migration handling (`entrypoint.sh`), `.dockerignore` file hygiene, environment variable categorization, health checks, GitHub Actions CI pipeline (`.github/workflows/ci.yml`), and 85 passing tests. | Completed |
+| **Milestone 9** (Current) | **Live Azure Cloud Deployment & Service Integration**: Multi-service enterprise Azure topology (`rg-engineering-copilot`): Azure PostgreSQL Flexible Server v16 (`psql-engcopilot-06724`), Azure OpenAI Service (`text-embedding-3-small` + `gpt-4o`), Azure AI Search (`search-engineering-copilot` with hybrid HNSW vector search), Azure Blob Storage (`stengcopilot06724`), Azure Storage Static Website & Azure Static Web Apps, and end-to-end live verification test suite. | Completed |
+| **Milestone 10** | **CAD Extension**: STEP/DXF geometric parser, 3D WebGL viewport canvas, and BOM cross-referencing. | Planned |

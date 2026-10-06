@@ -25,6 +25,8 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "https://stengcopilot06724.z13.web.core.windows.net",
+        "https://lively-river-014b48c0f.6.azurestaticapps.net",
     ]
 
     @field_validator("CORS_ORIGINS", mode="before")
@@ -49,7 +51,7 @@ class Settings(BaseSettings):
     AZURE_OPENAI_API_VERSION: Optional[str] = "2024-02-15-preview"
     AZURE_OPENAI_DEPLOYMENT: Optional[str] = "gpt-4o"
     AZURE_OPENAI_CHAT_DEPLOYMENT_NAME: Optional[str] = "gpt-4o"
-    AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME: Optional[str] = "text-embedding-3-large"
+    AZURE_OPENAI_EMBEDDING_DEPLOYMENT_NAME: Optional[str] = "text-embedding-3-small"
 
     # Azure AI Search Configuration (Optional for Milestone 2 - Staging / Configuration only)
     AZURE_SEARCH_ENDPOINT: Optional[str] = None
@@ -57,6 +59,18 @@ class Settings(BaseSettings):
     AZURE_SEARCH_INDEX_NAME: Optional[str] = "engineering-docs-index"
     AZURE_SEARCH_DOCUMENTS_INDEX_NAME: Optional[str] = "engineering-docs-index"
     AZURE_SEARCH_CAD_INDEX_NAME: Optional[str] = "cad-knowledge-index"
+
+    # Azure Storage Configuration
+    AZURE_STORAGE_CONNECTION_STRING: Optional[str] = None
+    AZURE_STORAGE_ACCOUNT: Optional[str] = None
+    AZURE_STORAGE_CONTAINER_NAME: str = "documents"
+    STORAGE_PROVIDER: str = "local"  # "local", "azure", "auto"
+
+    @field_validator("STORAGE_PROVIDER", mode="before")
+    def validate_storage_provider(cls, v: Union[str, None]) -> str:
+        if isinstance(v, str):
+            return v.lower().strip()
+        return "local"
 
     # Storage Paths (Resolved relative to project root)
     DOCUMENTS_STORAGE_DIR: str = str(

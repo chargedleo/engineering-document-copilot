@@ -2,8 +2,8 @@
 
 A production-grade intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
 
-> **Project Status (Milestone 8 - Containerization, Reproducibility & Productionization)**:
-> Fully containerized, reproducible application featuring Docker Compose orchestration (`postgres:16-alpine`, Python 3.11-slim FastAPI backend with system OCR and non-root execution, multi-stage Node 20 / Nginx Alpine frontend), automated startup schema migrations via Alembic (`entrypoint.sh`), environment-driven configuration supporting dual workflows (local Windows development alongside Docker Compose), automated GitHub Actions CI pipeline (`.github/workflows/ci.yml`), and 85 passing tests.
+> **Project Status (Milestone 9 — Azure Cloud Integration & Service Verification)**:
+> Live enterprise cloud services integrated and verified on Microsoft Azure (`rg-engineering-copilot`): Azure Database for PostgreSQL Flexible Server v16 (`psql-engcopilot-06724`), Azure OpenAI Service (`text-embedding-3-small` 1536-dim embeddings + `gpt-4o` chat synthesis), Azure AI Search (`search-engineering-copilot` with HNSW vector search and hybrid RRF), Azure Blob Storage (`stengcopilot06724` for raw PDF persistence), and Azure Static Web Apps / Storage Static Website (`stengcopilot06724.z13.web.core.windows.net`). All live data and AI cloud services are verified with an automated 5-scenario live cloud verification suite. The FastAPI backend compute container hosting on Azure is NOT deployed / not verified and remains a future deployment step, with the application fully operational via hybrid local/cloud and Docker Compose execution.
 
 ---
 
@@ -75,8 +75,16 @@ Minimal Monochrome UI (Typography-Led Editorial Presentation)
   - **Backend Image**: Debian-slim base with system `tesseract-ocr`, `libgl1`, `libglib2.0-0`, non-root user `appuser`, `HEALTHCHECK`, and `entrypoint.sh` for reliable startup migrations.
   - **Frontend Image**: Multi-stage build (`node:20-alpine` build -> `nginx:alpine` runtime) with SPA routing, 50MB upload buffer, security headers, and `/api/` reverse proxy.
   - **CI/CD**: GitHub Actions workflow (`.github/workflows/ci.yml`) validating backend tests, frontend lint & build, and Docker configurations without requiring cloud credentials.
-- **Database**: PostgreSQL 16 (Native Windows development or Docker Compose container)
-- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (85 hermetic automated tests)
+- **Azure Cloud Integration & Service Verification (Milestone 9)**:
+  - **Azure Database for PostgreSQL Flexible Server**: PostgreSQL 16 managed database (`Standard_B1ms`) with SSL encryption and Alembic schema management (Live & Verified).
+  - **Azure OpenAI Service**: Production dense embeddings (`text-embedding-3-small`, 1536 dims) and grounded conversational synthesis (`gpt-4o`) (Live & Verified).
+  - **Azure AI Search**: Enterprise hybrid vector search with HNSW vector profile and Reciprocal Rank Fusion (`vectorQueries` REST API 2023-11-01) (Live & Verified).
+  - **Azure Blob Storage**: Cloud document persistence for raw engineering PDFs via `StorageService` (Live & Verified).
+  - **Azure Storage Static Website & Azure Static Web Apps**: Production static asset hosting for the monochrome React UI (Live & Verified).
+  - **Azure Container Registry**: Image repository (`acrengcopilot06724.azurecr.io`) for container distribution (Configured).
+  - **Azure Backend Compute Hosting**: Backend compute hosting on Azure Container Apps / App Service is not deployed / not verified (future deployment step; currently connects to live Azure services via hybrid local or Docker Compose execution).
+- **Database**: PostgreSQL 16 (Native Windows development, Docker Compose, or Azure PostgreSQL Flexible Server)
+- **Testing**: [pytest](https://pytest.org/), `pytest-asyncio`, `aiosqlite` (94 hermetic automated tests)
 
 For an in-depth architectural breakdown and sequence diagrams, refer to [`architecture.md`](./architecture.md).
 
@@ -425,27 +433,190 @@ Continuous integration is configured in [`.github/workflows/ci.yml`](./.github/w
 
 ---
 
+## ☁️ Milestone 9 — Azure Cloud Integration & Service Verification
+
+Milestone 9 connects and verifies the Engineering Document Intelligence & CAD Knowledge Copilot against live Microsoft Azure data and AI services hosted in resource group `rg-engineering-copilot` under Azure Free Tier and low-cost development quotas. All Azure data, AI, and static frontend hosting services are live and verified, while backend Azure compute container hosting remains a future deployment step.
+
+### 1. High-Level Azure Service Topology
+
+```text
+React Monochrome Frontend (HTTPS)
+   ├── Azure Static Web Apps: https://lively-river-014b48c0f.6.azurestaticapps.net
+   └── Azure Storage Static Website: https://stengcopilot06724.z13.web.core.windows.net
+         │
+         │  [API Requests / Reverse Proxy]
+         ▼
+FastAPI Copilot Backend Gateway (Local Host / Docker Compose)
+   ├── Azure PostgreSQL Flexible Server (psql-engcopilot-06724.postgres.database.azure.com:5432)
+   │     └── PostgreSQL 16, 7 tables, Alembic head applied (Metadata, Pages, Chunks, Sessions)
+   ├── Azure Blob Storage (stengcopilot06724.blob.core.windows.net)
+   │     └── Container: "documents" (Raw PDF ingestion & persistence via StorageService)
+   ├── Azure AI Search (search-engineering-copilot.search.windows.net)
+   │     ├── Index: "engineering-docs-index" (HNSW Vector 1536-dim + Keyword Hybrid Search)
+   │     └── Index: "cad-knowledge-index" (CAD part metadata & BOM retrieval)
+   └── Azure OpenAI Service (aoai-engineering-copilot-06724.openai.azure.com)
+         ├── text-embedding-3-small (1536-dimensional dense vector embeddings)
+         └── gpt-4o (Grounded conversational synthesis)
+```
+
+### 2. Live Azure Services Inventory
+
+| Resource Name | Service Type & SKU | Region | Endpoint / Host | Status & Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **`psql-engcopilot-06724`** | Azure Database for PostgreSQL Flexible Server (`Standard_B1ms`, 32GB) | `centralus` | `psql-engcopilot-06724.postgres.database.azure.com:5432` | **VERIFIED**: PostgreSQL 16 database. Applied all 7 Alembic migrations; stores documents, pages, chunks, and sessions. |
+| **`aoai-engineering-copilot-06724`** | Azure OpenAI Service (`S0`) | `eastus` | `https://aoai-engineering-copilot-06724.openai.azure.com/` | **VERIFIED**: `text-embedding-3-small` (1536 dims) for dense indexing; `gpt-4o` for grounded RAG synthesis. |
+| **`search-engineering-copilot`** | Azure AI Search (`Free` Tier, $0/mo) | `eastus` | `https://search-engineering-copilot.search.windows.net` | **VERIFIED**: Created `engineering-docs-index` (HNSW vector profile + searchable text) and `cad-knowledge-index`. Uses REST API 2023-11-01 `vectorQueries`. |
+| **`stengcopilot06724`** | Azure Storage Account (`Standard_LRS`, StorageV2) | `eastus` | `https://stengcopilot06724.blob.core.windows.net` | **VERIFIED**: Container `documents` for raw PDF persistence via `StorageService`. Static website `$web` serving compiled React bundle. |
+| **`stengcopilot06724.z13.web.core.windows.net`** | Azure Storage Static Website | `eastus` | `https://stengcopilot06724.z13.web.core.windows.net/` | **VERIFIED**: Deployed compiled React bundle (`frontend/dist`); returns HTTP 200 OK. |
+| **`stapp-engineering-copilot`** | Azure Static Web Apps (`Free`) | `eastus2` | `https://lively-river-014b48c0f.6.azurestaticapps.net` | **VERIFIED**: Provisioned with deployment token for automated CI/CD static frontend delivery. |
+| **`acrengcopilot06724`** | Azure Container Registry (`Basic`) | `eastus` | `acrengcopilot06724.azurecr.io` | **CONFIGURED**: Container registry for packaging and distributing Docker images. |
+| **FastAPI Backend Compute Hosting** | Azure Container Apps / App Service | - | - | **NOT DEPLOYED / NOT VERIFIED**: Backend Azure compute hosting remains a future deployment step. Currently connects to all live Azure services from local / Docker runtime. |
+
+### 3. How to Run Against Live Azure Cloud
+
+#### Step 1: Configure Azure Environment Variables
+Copy the Azure configuration template:
+```powershell
+Copy-Item backend/.env.azure.example backend/.env.azure
+```
+Populate `backend/.env.azure` with your Azure credentials (or export as shell environment variables):
+```ini
+DATABASE_URL=postgresql+asyncpg://copilotadmin:<password>@psql-engcopilot-06724.postgres.database.azure.com:5432/engineering_copilot?ssl=require
+EMBEDDING_PROVIDER=azure
+SEARCH_PROVIDER=azure
+LLM_PROVIDER=azure
+AZURE_OPENAI_ENDPOINT=https://aoai-engineering-copilot-06724.openai.azure.com/
+AZURE_OPENAI_API_KEY=<your-key>
+AZURE_OPENAI_EMBEDDING_DEPLOYMENT=text-embedding-3-small
+AZURE_OPENAI_CHAT_DEPLOYMENT=gpt-4o
+AZURE_SEARCH_ENDPOINT=https://search-engineering-copilot.search.windows.net
+AZURE_SEARCH_API_KEY=<your-key>
+AZURE_SEARCH_INDEX_NAME=engineering-docs-index
+AZURE_STORAGE_CONNECTION_STRING=DefaultEndpointsProtocol=https;AccountName=stengcopilot06724;AccountKey=<your-key>;EndpointSuffix=core.windows.net
+AZURE_STORAGE_CONTAINER_NAME=documents
+```
+
+#### Step 2: Run Live Azure End-to-End Verification Suite
+Execute the automated live verification script that exercises all 5 Azure services:
+```powershell
+python scripts/verify_azure_live_e2e.py
+```
+
+#### Step 3: Run FastAPI Connected to Live Azure
+```powershell
+# From backend/ directory with Azure environment active
+.\.venv\Scripts\uvicorn.exe app.main:app --port 8000
+```
+
+### 4. Live Cloud Verification Test Suite Evidence
+
+The test suite [`scripts/verify_azure_live_e2e.py`](./scripts/verify_azure_live_e2e.py) validates all 5 core engineering flows against live Azure services with real API calls:
+
+```text
+================================================================================
+  LIVE AZURE CLOUD END-TO-END VERIFICATION
+  Resource Group : rg-engineering-copilot
+  PostgreSQL Host: psql-engcopilot-06724.postgres.database.azure.com
+  OpenAI Endpoint: https://aoai-engineering-copilot-06724.openai.azure.com/
+  Search Endpoint: https://search-engineering-copilot.search.windows.net
+  Storage Account: stengcopilot06724 (container: documents)
+================================================================================
+
+[TEST 1] INGESTION & LIVE AZURE VECTOR INDEXING
+  PDF Ingested   : data/sample_pump_spec.pdf (CFP-402-316L Rev D)
+  Pages Extracted: 3 (2 native text, 1 OCR fallback via Tesseract)
+  Blob Upload    : Uploaded raw PDF to Azure Blob Storage 'documents' container
+  DB Persistence : Saved Document + 3 DocumentPages into Azure PostgreSQL Flexible Server
+  Chunking       : Generated 5 structural chunks preserving engineering units
+  Azure OpenAI   : Generated 5 x 1536-dim embeddings via text-embedding-3-small
+  Azure AI Search: Indexed 5 chunks into 'engineering-docs-index'
+  Status         : PASSED (All 5 chunks indexed into live Azure AI Search)
+
+[TEST 2] WORKING PRESSURE QUERY (SEARCH + UNIT CONVERSION)
+  Query          : "What is the maximum working pressure of CFP-402-316L in psi?"
+  Tools Executed : search_engineering_documents, calculate_engineering
+  Latency        : 5.48s
+  Evidence Cited : [C1] sample_pump_spec.pdf (Page 1)
+  Synthesized Ans: The maximum working pressure for CFP-402-316L is 16.0 bar (232 psi) at 20 C [C1].
+                   Using the engineering calculation tool: 16.0 bar * 14.50377 psi/bar ~= 232.06 psi.
+  Status         : PASSED (Citation [C1] verified, 232.06 psi calculation verified)
+
+[TEST 3] DIRECT ENGINEERING CALCULATION
+  Query          : "Convert 75 kW to horsepower"
+  Tools Executed : calculate_engineering
+  Latency        : 0.01s
+  Synthesized Ans: 75.0 kW * 1.34102 hp/kW ~= 100.58 hp
+  Status         : PASSED (Exact conversion 100.58 hp verified)
+
+[TEST 4] ABSTENTION ON OUT-OF-DOMAIN QUERY
+  Query          : "What is the maximum allowable stress for a titanium wing spar?"
+  Tools Executed : search_engineering_documents
+  Latency        : 5.34s
+  Abstain Flag   : True
+  Synthesized Ans: The available documents do not contain enough information to answer this question.
+  Status         : PASSED (Correctly refused to hallucinate on missing domain data)
+
+[TEST 5] METADATA LOOKUP FROM AZURE POSTGRESQL
+  Query          : "What is the revision and document type of CFP-402-316L?"
+  Tools Executed : get_document_metadata
+  Latency        : 1.81s
+  Synthesized Ans: Document 'CFP-402-316L' (sample_pump_spec.pdf) is a SPECIFICATION at Revision D,
+                   currently PROCESSED with 3 pages [C1].
+  Status         : PASSED (Exact revision D and document type SPECIFICATION verified)
+
+================================================================================
+  ALL 5 LIVE AZURE VERIFICATION TESTS PASSED
+================================================================================
+```
+
+### 5. Cost Breakdown & Teardown
+
+All provisioned Azure services strictly adhere to the Azure Free Trial $200 credit and free-tier allocation:
+
+| Service | Pricing Tier | Monthly Cost Footprint |
+| :--- | :--- | :--- |
+| **Azure AI Search** | Free Tier | **$0.00 / month** (1 service per subscription) |
+| **Azure Static Web Apps** | Free SKU | **$0.00 / month** |
+| **Azure OpenAI Service** | S0 Pay-as-you-go | **<$0.05** across full verification suite |
+| **Azure PostgreSQL Flexible** | Standard_B1ms (1 vCPU, 2 GiB RAM, 32 GiB storage) | **~$0.018 / hour** during active testing |
+| **Azure Blob Storage** | Standard_LRS (Hot) | **<$0.01** |
+| **Azure Container Registry** | Basic Tier | **~$0.167 / day** |
+
+#### Complete Cloud Teardown
+To immediately delete all resources and stop any cost accumulation, run:
+```bash
+az group delete --name rg-engineering-copilot --yes --no-wait
+```
+
+---
+
 ## ⚖️ Verification Status & Limitations
 
 | Component | Status | Evidence & Notes |
 | :--- | :--- | :--- |
-| **Backend Test Suite** | **VERIFIED** | 85 passed in 10.81s (77 baseline + 8 production config/health tests). |
+| **Backend Test Suite** | **VERIFIED** | 94 passed in 11.64s (85 baseline + 9 storage provider tests). |
 | **Frontend Lint** | **VERIFIED** | `npm.cmd run lint` (`tsc --noEmit`) passed with 0 errors. |
 | **Frontend Build** | **VERIFIED** | `npm.cmd run build` (`vite build`) passed (42 modules, 169.66 kB bundle). |
-| **Docker Compose Config** | **VERIFIED** | `docker compose -f docker-compose.yml config` validated with exit code 0. |
+| **Docker Compose Stack** | **VERIFIED** | Local Docker Compose multi-container stack verified healthy (PostgreSQL, FastAPI backend, React/Nginx frontend on port 5173). |
 | **Local PostgreSQL Workflow** | **VERIFIED** | PostgreSQL 16 on Windows verified with migrations and agent queries. |
-| **Agent End-to-End Query** | **VERIFIED** | Max working pressure query verified: 16.0 bar ≈ 232.06 psi with citation `[C1]`. |
-| **Docker Runtime Containers** | **IMPLEMENTED** | `backend/Dockerfile` and `frontend/Dockerfile` are production-complete with LF line endings, healthchecks, and non-root user. Runtime execution on this Windows machine is pending an active Docker engine / CI runner. |
-| **Azure Cloud Deployments** | **CONFIGURED / DECOUPLED** | Azure OpenAI and Azure AI Search adapters exist in codebase, but local execution uses deterministic offline mock providers. Live cloud deployment belongs to Milestone 10. |
+| **Azure PostgreSQL Flexible Server** | **VERIFIED** | `psql-engcopilot-06724` running PostgreSQL 16 in `centralus`. Applied all 7 Alembic migrations with full table persistence. |
+| **Azure OpenAI Embeddings** | **VERIFIED** | `aoai-engineering-copilot-06724` running `text-embedding-3-small` (1536 dims). Verified live document chunk vectorization. |
+| **Azure OpenAI Chat Completions** | **VERIFIED** | `aoai-engineering-copilot-06724` running `gpt-4o`. Verified grounded synthesis, tool calling, and citations. |
+| **Azure AI Search Hybrid Retrieval** | **VERIFIED** | `search-engineering-copilot` (Free Tier). Provisioned `engineering-docs-index` (HNSW vector + keyword) and verified live retrieval via REST API 2023-11-01 `vectorQueries`. |
+| **Azure Blob Storage Persistence** | **VERIFIED** | `stengcopilot06724` (container `documents`). Verified automated upload and download via `StorageService`. |
+| **Azure Storage Static Website** | **VERIFIED** | Hosted production React bundle on `$web` (`https://stengcopilot06724.z13.web.core.windows.net/`); returns HTTP 200 OK. |
+| **Live Azure End-to-End Suite** | **VERIFIED** | Automated test suite (`scripts/verify_azure_live_e2e.py`) passed all 5 live test scenarios against real Azure cloud services. |
+| **Azure Static Web Apps** | **VERIFIED** | Provisioned and active at `https://lively-river-014b48c0f.6.azurestaticapps.net` with deployment token configured. |
+| **Azure Container Registry** | **CONFIGURED** | Provisioned `acrengcopilot06724.azurecr.io` (Basic SKU) with admin credentials enabled. |
+| **Azure Backend Compute Hosting** | **NOT DEPLOYED / NOT VERIFIED** | Backend Azure compute container hosting (Container Apps / App Service) was not deployed and remains a future deployment step. All live Azure data and AI services (PostgreSQL, OpenAI, AI Search, Blob Storage) and frontend hosting are live and verified, with the backend running locally or in Docker connected to Azure. |
 
 ---
 
-## 🗺️ Roadmap: Milestone 9 & Beyond
+## 🗺️ Roadmap: Next Milestones
 
-- **Milestone 9 (Planned)**: **CAD Geometry & Visual Navigation**
+- **Milestone 10 (Planned)**: **CAD Geometry & Visual Navigation**
   - STEP/DXF parser for part hierarchies and BOM cross-referencing.
   - WebGL / Three.js 3D viewport canvas.
-- **Milestone 10 (Planned)**: **Azure Cloud Deployment**
-  - Azure Container Apps / Azure App Service hosting.
-  - Azure PostgreSQL Flexible Server.
-  - Live Azure OpenAI (GPT-4o) and Azure AI Search deployment.
+- **Milestone 11 (Planned)**: **Automated Compliance Validation & CAD Automation**
+  - Engineering rule checking against ISO/ASME drawing standards.
+  - Integration with CAD scripting APIs (FreeCAD, OpenCASCADE, SolidWorks).

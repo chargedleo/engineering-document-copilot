@@ -148,9 +148,10 @@ class AzureSearchIndex(BaseSearchIndex):
         elif mode == "vector":
             if not query_vector:
                 return []
-            payload["vectors"] = [
+            payload["vectorQueries"] = [
                 {
-                    "value": query_vector,
+                    "kind": "vector",
+                    "vector": query_vector,
                     "fields": "embedding",
                     "k": top_k,
                 }
@@ -158,9 +159,10 @@ class AzureSearchIndex(BaseSearchIndex):
         else:  # hybrid
             payload["search"] = query or "*"
             if query_vector:
-                payload["vectors"] = [
+                payload["vectorQueries"] = [
                     {
-                        "value": query_vector,
+                        "kind": "vector",
+                        "vector": query_vector,
                         "fields": "embedding",
                         "k": top_k,
                     }

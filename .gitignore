@@ -16,7 +16,9 @@ venv.bak/
 # Environment Variables & Secrets
 .env
 .env.local
-.env.*.local
+.env.azure
+.env.*
+!.env*.example
 *.pem
 *.key
 

@@ -41,3 +41,9 @@ def get_embedding_provider() -> BaseEmbeddingProvider:
         _cached_provider = LocalMockEmbeddingProvider()
 
     return _cached_provider
+
+
+def reset_embedding_provider() -> None:
+    """Helper for testing to reset cached provider instance."""
+    global _cached_provider
+    _cached_provider = None
