@@ -7,7 +7,81 @@ A production-oriented intelligent copilot platform designed for engineering team
     <strong>Open Live Demo</strong>
   </a>
 </p>
+# Engineering Document Intelligence & CAD Knowledge Copilot
 
+An AI-assisted engineering knowledge copilot that combines document intelligence, hybrid RAG, LangGraph tool orchestration, and deterministic engineering calculations to provide grounded, citation-backed answers from technical documentation.
+
+<p align="center">
+  <a href="https://lively-river-014b48c0f.6.azurestaticapps.net/">
+    <strong>🚀 Open Live Preview</strong>
+  </a>
+</p>
+
+> **Deployment:** Frontend hosted on Azure Static Web Apps. Full backend runs locally through Docker.
+
+<p align="center">
+  <img src="docs/screenshots/home.png.png" alt="Engineering Copilot Home" width="900">
+</p>
+
+---
+
+## Core Capabilities
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+### Grounded RAG
+
+<a href="docs/screenshots/grounded-rag.png.png">
+  <img src="docs/screenshots/grounded-rag.png.png" alt="Grounded Engineering RAG">
+</a>
+
+**Citation-backed engineering answers**
+
+</td>
+
+<td width="33%" align="center">
+
+### Engineering Tools
+
+<a href="docs/screenshots/engineering-calculation.png.png">
+  <img src="docs/screenshots/engineering-calculation.png.png" alt="Deterministic Engineering Calculation">
+</a>
+
+**Tool-based deterministic calculations**
+
+</td>
+
+<td width="33%" align="center">
+
+### Safe Abstention
+
+<a href="docs/screenshots/absentation.png.png">
+  <img src="docs/screenshots/absentation.png.png" alt="Evidence-Grounded Abstention">
+</a>
+
+**No answer when evidence is insufficient**
+
+</td>
+</tr>
+</table>
+
+---
+
+## System Overview
+
+<p align="center">
+  <img src="docs/screenshots/architecture.png.png" alt="Engineering Copilot Architecture" width="900">
+</p>
+
+## Document Intelligence
+
+<p align="center">
+  <img src="docs/screenshots/document-registry.png.png" alt="Engineering Document Registry" width="900">
+</p>
+
+---
 > **Portfolio Alignment**: Built as an applied engineering portfolio project supporting applications for **AI/ML Engineer**, **AI Graduate Engineer**, and **CAD Automation & Applied AI** roles (e.g., Atlas Copco GECIA Graduate Engineer Trainee). Demonstrates enterprise document intelligence, deterministic hybrid retrieval, grounded agentic reasoning, Docker productionization, and live Microsoft Azure cloud integration.
 >
 > **Project Status (Milestone 10 — Final Evaluation, Polish & Portfolio Release [COMPLETE])**:
