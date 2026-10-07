@@ -7,6 +7,7 @@ A production-oriented intelligent copilot platform designed for engineering team
     <strong>Open Live Demo</strong>
   </a>
 </p>
+> **Deployment:** Frontend hosted on Azure Static Web Apps. Full backend runs locally through Docker.
 
 <p align="center">
   <img src="docs/screenshots/home.png.png" alt="Engineering Copilot Home" width="900">
