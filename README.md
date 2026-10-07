@@ -1,12 +1,13 @@
 # Engineering Document Intelligence & CAD Knowledge Copilot
 
-A production-oriented intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
+An AI-assisted engineering knowledge copilot that combines document intelligence, hybrid RAG, LangGraph tool orchestration, and deterministic engineering calculations to provide grounded, citation-backed answers from technical documentation.
 
 <p align="center">
   <a href="https://lively-river-014b48c0f.6.azurestaticapps.net/">
-    <strong>Open Live Demo</strong>
+    <strong>Open Live Preview</strong>
   </a>
 </p>
+
 > **Deployment:** Frontend hosted on Azure Static Web Apps. Full backend runs locally through Docker.
 
 <p align="center">
