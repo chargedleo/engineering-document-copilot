@@ -2,6 +2,12 @@
 
 A production-oriented intelligent copilot platform designed for engineering teams to parse, index, search, and reason over complex engineering documents (specifications, BOMs, standards, datasheets) and CAD models/metadata.
 
+<p align="center">
+  <a href="https://lively-river-014b48c0f.6.azurestaticapps.net/">
+    <strong>Open Live Demo</strong>
+  </a>
+</p>
+
 > **Portfolio Alignment**: Built as an applied engineering portfolio project supporting applications for **AI/ML Engineer**, **AI Graduate Engineer**, and **CAD Automation & Applied AI** roles (e.g., Atlas Copco GECIA Graduate Engineer Trainee). Demonstrates enterprise document intelligence, deterministic hybrid retrieval, grounded agentic reasoning, Docker productionization, and live Microsoft Azure cloud integration.
 >
 > **Project Status (Milestone 10 — Final Evaluation, Polish & Portfolio Release [COMPLETE])**:
